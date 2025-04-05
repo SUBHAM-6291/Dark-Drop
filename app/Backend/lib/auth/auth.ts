@@ -2,10 +2,10 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import * as EmailValidator from 'email-validator';
 
-const SECRET = process.env.JWT_SECRET as string;
+ const JWT_SECRET = process.env.JWT_SECRET as string;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
 
-if (!SECRET) {
+if (!JWT_SECRET) {
   throw new Error('Please add JWT_SECRET to your .env.local file');
 }
 if (!REFRESH_SECRET) {
@@ -13,7 +13,7 @@ if (!REFRESH_SECRET) {
 }
 
 export function signToken(payload: object) {
-  return jwt.sign(payload, SECRET, { expiresIn: '1h' });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' });
 }
 
 export function signRefreshToken(payload: object) {
@@ -22,7 +22,7 @@ export function signRefreshToken(payload: object) {
 
 export function verifyToken(token: string) {
   try {
-    return jwt.verify(token, SECRET);
+    return jwt.verify(token,JWT_SECRET);
   } catch (err) {
     console.error("Token verification failed:", err);
     return null;

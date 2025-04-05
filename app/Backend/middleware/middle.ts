@@ -9,8 +9,8 @@ import multer from 'multer';
 
 const rateLimiter = new RateLimiterMemory({
 
-    points :5, // 5 points
-    duration: 60, // per second
+    points :5,
+    duration: 60,
 })
 
  export const MulterUpload=multer({
