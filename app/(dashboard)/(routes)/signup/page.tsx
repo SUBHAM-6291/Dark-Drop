@@ -1,53 +1,56 @@
-'use client'
 
-import React, { useState } from 'react'
+'use client'
+import React from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from 'next/link'
-import toast, { Toaster } from 'react-hot-toast'
-import { z } from "zod"
-import { signupSchema} from '@/app/Backend/zod/signup'
+import { useRouter } from 'next/navigation'
+import { signup } from '@/app/Backend/Axios/wiring'
+import { useForm } from 'react-hook-form'
 
+type SignupFormData = {
+  username: string
+  email: string
+  password: string
+  confirmPassword: string
+}
 
 const SignupPage = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const router = useRouter()
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch,
+    reset,
+  } = useForm<SignupFormData>({
+    defaultValues: {
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+    },
+  })
+  const password = watch('password')
 
-  const handleSignup = () => {
-    setIsSubmitting(true)
-
+  const onSubmit = async (data: SignupFormData) => {
     try {
-      signupSchema.parse({ name, email, password, confirmPassword })
+      const { username, email, password } = data
+      const signupData = { username, email, password }
+      await signup(signupData)
 
-      setTimeout(() => {
-        setIsSubmitting(false)
-        toast.success('Signup successful! Welcome to the fastest file-sharing experience.')
+      router.push('/dashboard')
 
-      }, 1000)
+      reset()
     } catch (error) {
-      setTimeout(() => {
-        setIsSubmitting(false)
-        if (error instanceof z.ZodError) {
-          toast.error(error.errors[0].message)
-        } else {
-          toast.error(' pls enter the valid details if any problem contact the admin @subhamsingh39621@gmail.com')
-        }
-      }, 500)
+      console.error('Signup error:', error)
     }
   }
-
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
-      {}
-      <Toaster position="top-right" />
-
-      {}
+     
       <div className="w-full max-w-md bg-black border border-gray-800 rounded-xl p-8 shadow-xl shadow-gray-900/60">
-        {}
         <div className="text-center mb-6 flex flex-col items-center">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-black rounded-md flex items-center justify-center border border-gray-700">
@@ -62,25 +65,27 @@ const SignupPage = () => {
           </p>
         </div>
 
-        {}
         <h2 className="text-2xl font-semibold text-white mb-6 text-center">
           Create an Account
         </h2>
 
-        {}
-        <div className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-white text-sm font-medium">
-              Name
+            <Label htmlFor="username" className="text-white text-sm font-medium">
+              Username
             </Label>
             <Input
               type="text"
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              id="username"
+              {...register('username', {
+                required: 'Username is required',
+                minLength: { value: 3, message: 'Username must be at least 3 characters' },
+                maxLength: { value: 50, message: 'Username cannot exceed 50 characters' },
+              })}
               className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-white/70 focus:ring-2 focus:ring-white/30 rounded-md transition-all duration-300"
-              placeholder="Enter name"
+              placeholder="Enter username"
             />
+            {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -90,11 +95,14 @@ const SignupPage = () => {
             <Input
               type="email"
               id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              {...register('email', {
+                required: 'Email is required',
+                pattern: { value: /^\S+@\S+\.\S+$/, message: 'Invalid email format' },
+              })}
               className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-white/70 focus:ring-2 focus:ring-white/30 rounded-md transition-all duration-300"
               placeholder="Enter email"
             />
+            {errors.email && <p className="text-red-500 text-sm">{errors.email.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -104,11 +112,14 @@ const SignupPage = () => {
             <Input
               type="password"
               id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              {...register('password', {
+                required: 'Password is required',
+                minLength: { value: 8, message: 'Password must be at least 8 characters' },
+              })}
               className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-white/70 focus:ring-2 focus:ring-white/30 rounded-md transition-all duration-300"
               placeholder="Enter password"
             />
+            {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
           </div>
 
           <div className="space-y-2">
@@ -118,23 +129,27 @@ const SignupPage = () => {
             <Input
               type="password"
               id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              {...register('confirmPassword', {
+                required: 'Confirm Password is required',
+                validate: (value) => value === password || "Passwords don't match",
+              })}
               className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 focus:border-white/70 focus:ring-2 focus:ring-white/30 rounded-md transition-all duration-300"
               placeholder="Confirm password"
             />
+            {errors.confirmPassword && (
+              <p className="text-red-500 text-sm">{errors.confirmPassword.message}</p>
+            )}
           </div>
 
           <Button
-            onClick={handleSignup}
+            type="submit"
             disabled={isSubmitting}
             className="w-full bg-white text-black font-semibold rounded-md hover:bg-gray-100 hover:scale-105 transition-all duration-300 ease-in-out"
           >
             {isSubmitting ? 'Signing Up...' : 'Sign Up'}
           </Button>
-        </div>
+        </form>
 
-        {}
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -159,7 +174,6 @@ const SignupPage = () => {
           </Button>
         </div>
 
-        {}
         <p className="mt-4 text-center text-sm text-gray-300">
           Already have an account?{' '}
           <Link href="/signin" className="text-white hover:text-gray-200 hover:underline transition-colors duration-200">

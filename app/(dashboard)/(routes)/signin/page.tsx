@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import Link from 'next/link';
 import toast, { Toaster } from 'react-hot-toast';
 import { z } from "zod";
-import { signInSchema } from '@/app/Backend/zod/sigin';
+import { USER_ZOD } from "@/app/Backend/zod/UserModel.zod";
 
 const SignInPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,7 +19,7 @@ const SignInPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      signInSchema.parse({ name, email, password });
+      USER_ZOD.parse({ name, email, password });
 
       setTimeout(() => {
         setIsSubmitting(false);
