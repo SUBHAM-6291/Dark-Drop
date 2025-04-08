@@ -1,15 +1,14 @@
-// app/api/auth/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, UploadResponse } from "@/app/Backend/imagekit/files";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel, IImage } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
 import { v4 as uuidv4 } from "uuid";
-import { uploadMiddleware } from "@/app/Backend/middleware/imagekit/middleware";
+
+
 
 export async function POST(request: NextRequest) {
   try {
-    // Authentication
     const token = request.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json(
@@ -28,23 +27,19 @@ export async function POST(request: NextRequest) {
 
     const email = decoded.email;
 
-    // Get form data
-    const formData = await request.formData();
-    const files = formData.getAll("file") as File[];
-    
-    // Run middleware validation
-    const middlewareResponse = await uploadMiddleware(files);
-    if (middlewareResponse) {
-      return middlewareResponse; // Return early if middleware rejects the request
-    }
-
-    // Database connection
     await connectDB();
 
-    // Upload files
+    const formData = await request.formData();
+    const files = formData.getAll("file") as File[];
+    if (!files.length) {
+      return NextResponse.json(
+        { success: false, error: "No files provided" },
+        { status: 400 }
+      );
+    }
+
     const result: UploadResponse = await handleUpload(files);
 
-    // Save to database if successful
     if (result.success && result.imageUrls && result.details?.uploadedFiles) {
       const newImages: IImage[] = result.details.uploadedFiles.map((file) => ({
         imageId: uuidv4(),
@@ -63,7 +58,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Return response
     return NextResponse.json({
       success: result.success,
       urls: result.imageUrls,
