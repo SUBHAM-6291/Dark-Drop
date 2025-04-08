@@ -57,4 +57,4 @@ return NextResponse.json ({
   }
 }
 
-export const config = { matcher: '/api/upload' };
+export const config = { matcher: '/api/dashboard' };
