@@ -1,99 +1,77 @@
+// app/api/auth/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import ImageKit from "imagekit";
+import { handleUpload, UploadResponse } from "@/app/Backend/imagekit/files";
+import { connectDB } from "@/app/Backend/DB/DB";
+import { UserImagesModel, IImage } from "@/app/Backend/models/url.model";
+import { verifyToken } from "@/app/Backend/lib/auth/auth";
+import { v4 as uuidv4 } from "uuid";
+import { uploadMiddleware } from "@/app/Backend/middleware/imagekit/middleware";
 
-const IMAGEKIT_PUBLIC_KEY = process.env.IMAGEKIT_PUBLIC_KEY;
-const IMAGEKIT_PRIVATE_KEY = process.env.IMAGEKIT_PRIVATE_KEY;
-const IMAGEKIT_URL_ENDPOINT = process.env.IMAGEKIT_URL_ENDPOINT;
-
-if (!IMAGEKIT_PUBLIC_KEY) {
-  throw new Error("IMAGEKIT_PUBLIC_KEY is not defined");
-}
-if (!IMAGEKIT_PRIVATE_KEY) {
-  throw new Error("IMAGEKIT_PRIVATE_KEY is not defined");
-}
-if (!IMAGEKIT_URL_ENDPOINT) {
-  throw new Error("IMAGEKIT_URL_ENDPOINT is not defined");
-}
-
-const imagekit = new ImageKit({
-  publicKey: IMAGEKIT_PUBLIC_KEY,
-  privateKey: IMAGEKIT_PRIVATE_KEY,
-  urlEndpoint: IMAGEKIT_URL_ENDPOINT,
-});
-
-interface UploadResponse {
-  success: boolean;
-  imageUrls?: string[];
-  filecount?: number;
-  error?: string;
-}
-
-interface UploadedFile {
-  url: string;
-  fileId: string;
-  name: string;
-}
-
-async function uploadFile(file: File): Promise<UploadedFile> {
-  const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-  if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`File ${file.name} exceeds 5MB limit`);
-  }
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const result = await imagekit.upload({
-    file: buffer,
-    fileName: file.name,
-  });
-  return result;
-}
-
-export async function POST(request: NextRequest): Promise<NextResponse<UploadResponse>> {
+export async function POST(request: NextRequest) {
   try {
+    // Authentication
+    const token = request.cookies.get("token")?.value;
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const decoded = verifyToken(token);
+    if (!decoded || typeof decoded === "string" || !("email" in decoded)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
+
+    const email = decoded.email;
+
+    // Get form data
     const formData = await request.formData();
     const files = formData.getAll("file") as File[];
+    
+    // Run middleware validation
+    const middlewareResponse = await uploadMiddleware(files);
+    if (middlewareResponse) {
+      return middlewareResponse; // Return early if middleware rejects the request
+    }
 
-    if (!files.length) {
-      return NextResponse.json(
-        { success: false, error: "No files uploaded" },
-        { status: 400 }
+    // Database connection
+    await connectDB();
+
+    // Upload files
+    const result: UploadResponse = await handleUpload(files);
+
+    // Save to database if successful
+    if (result.success && result.imageUrls && result.details?.uploadedFiles) {
+      const newImages: IImage[] = result.details.uploadedFiles.map((file) => ({
+        imageId: uuidv4(),
+        filePath: file.url,
+        fileName: file.name,
+        uploadedAt: file.uploadDate || new Date(),
+      }));
+
+      await UserImagesModel.findOneAndUpdate(
+        { email },
+        {
+          $push: { images: { $each: newImages } },
+          $setOnInsert: { email },
+        },
+        { upsert: true }
       );
     }
 
-    if (files.length > 5) {
-      return NextResponse.json(
-        { success: false, error: "Maximum 5 files allowed" },
-        { status: 400 }
-      );
-    }
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif"] as const;
-    const MAX_SIZE = 5 * 1024 * 1024;
-
-    for (const file of files) {
-      if (!allowedTypes.includes(file.type as typeof allowedTypes[number])) {
-        return NextResponse.json(
-          { success: false, error: `Invalid file type: ${file.name}` },
-          { status: 400 }
-        );
-      }
-      if (file.size > MAX_SIZE) {
-        return NextResponse.json(
-          { success: false, error: `File too large: ${file.name}` },
-          { status: 400 }
-        );
-      }
-    }
-
-    const uploadedFiles = await Promise.all(files.map(uploadFile));
-
+    // Return response
     return NextResponse.json({
-      success: true,
-      imageUrls: uploadedFiles.map((file) => file.url),
-      filecount: files.length,
-    });
-  } catch (error: unknown) {
+      success: result.success,
+      urls: result.imageUrls,
+      filecount: result.filecount,
+      error: result.error,
+    }, { status: 200 });
+
+  } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process files";
     return NextResponse.json(
       { success: false, error: errorMessage },

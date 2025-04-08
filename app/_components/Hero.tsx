@@ -15,7 +15,6 @@ const Hero = () => {
             alt="Professional woman in office"
             className="w-full h-full object-cover object-center opacity-80"
             style={{ maxWidth: '100%', maxHeight: '100vh' }}
-          // Fallback image
           />
         </div>
 

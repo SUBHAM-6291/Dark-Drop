@@ -10,7 +10,7 @@ import { SIGNUP_WIRING } from "@/app/Backend/Axios/wiring";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { USER_ZOD, UserZodType } from "@/app/Backend/zod/UserModel.zod";
-import { signIn } from "next-auth/react"; // Import signIn for Google auth
+import { signIn } from "next-auth/react";
 
 const SignupPage = () => {
   const router = useRouter();
@@ -29,7 +29,6 @@ const SignupPage = () => {
     },
   });
 
-  // Handle email/password signup
   const onSubmit = async (data: UserZodType) => {
     try {
       const { username, email, password } = data;
@@ -42,18 +41,17 @@ const SignupPage = () => {
     }
   };
 
-  // Handle Google signup/login
   const handleGoogleSignIn = async () => {
     try {
       const result = await signIn("google", {
-        callbackUrl: "/dashboard", // Redirect to dashboard after successful login
-        redirect: false, // Handle redirect manually
+        callbackUrl: "/dashboard",
+        redirect: false,
       });
 
       if (result?.error) {
         console.error("Google sign-in error:", result.error);
       } else if (result?.url) {
-        router.push(result.url); // Manually redirect if needed
+        router.push(result.url);
       }
     } catch (error) {
      
@@ -175,7 +173,7 @@ const SignupPage = () => {
 
           <Button
             variant="outline"
-            onClick={handleGoogleSignIn} // Add Google sign-in handler
+            onClick={handleGoogleSignIn}
             className="mt-4 w-full bg-gray-900 border-gray-700 text-white hover:bg-gray-800 hover:border-white/50 hover:scale-105 rounded-md transition-all duration-300 ease-in-out"
           >
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
