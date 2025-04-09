@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { SIGIN_WIRING } from "@/app/Backend/Axios/wiring";
+import { api } from "@/app/Backend/services/axios"; // Import your axios API
 
 const signInSchema = z.object({
   usernameOrEmail: z.string().min(1, "Username or email is required"),
@@ -34,10 +34,11 @@ const SignInPage = () => {
 
   const onSubmit = async (data: SignInFormData) => {
     try {
-      const response = await SIGIN_WIRING.login(data.usernameOrEmail, data.password);
+      const response = await api.signin(data.usernameOrEmail, data.password);
       console.log("Signin response:", response);
-      
-      if (response.success) {
+
+      // Assuming your signin endpoint returns a UserResponse-like structure
+      if (response.message === "User data fetched successfully" || response.user) {
         router.push("/dashboard");
       } else {
         alert(response.message || "Invalid credentials");
@@ -99,7 +100,7 @@ const SignInPage = () => {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-white text-black"
+            className="w-full bg-white text-black hover:bg-gray-200"
           >
             {isSubmitting ? "Signing In..." : "Sign In"}
           </Button>

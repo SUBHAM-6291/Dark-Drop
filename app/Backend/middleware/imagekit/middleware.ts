@@ -6,12 +6,20 @@ export async function uploadMiddleware(files: File[]): Promise<NextResponse<Uplo
     return NextResponse.json({ success: false, error: "No files uploaded" }, { status: 400 });
   }
 
-  if (files.length > 5) {
-    return NextResponse.json({ success: false, error: "Maximum 5 files allowed" }, { status: 400 });
+  if (files.length > 10) {
+    return NextResponse.json({ success: false, error: "Maximum 10 files allowed" }, { status: 400 });
   }
 
-  const allowedTypes = ["image/jpeg", "image/png", "image/gif"] as const;
-  const MAX_SIZE = 5 * 1024 * 1024;
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/bmp",
+    "image/tiff",
+    "image/webp",
+    "image/heic",
+    "image/jpg"
+  ] as const;
+  const MAX_SIZE = 20 * 1024 * 1024; // 20MB in bytes
 
   for (const file of files) {
     if (!allowedTypes.includes(file.type as typeof allowedTypes[number])) {

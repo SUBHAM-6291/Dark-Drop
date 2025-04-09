@@ -2,7 +2,7 @@
 
 import React from "react";
 import toast from "react-hot-toast";
-import { uploadFiles, UploadResponse } from "@/app/Backend/Axios/wiring";
+import { api } from"@/app/Backend/services/axios"; // Use the centralized Axios client
 
 interface UploadSidebarContentProps {
   imageUrls?: string[];
@@ -17,8 +17,8 @@ const UploadSidebarContent: React.FC<UploadSidebarContentProps> = ({ imageUrls, 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files ? Array.from(event.target.files) : [];
     if (files.length === 0) return;
-    if (files.length > 5) {
-      toast.error("Max 5 drops allowed", { style: { background: "#1f1f1f", color: "#fff" } });
+    if (files.length > 10) {
+      toast.error("Max 10 drops allowed", { style: { background: "#1f1f1f", color: "#fff" } });
       return;
     }
     setSelectedFiles(files);
@@ -35,7 +35,7 @@ const UploadSidebarContent: React.FC<UploadSidebarContentProps> = ({ imageUrls, 
     selectedFiles.forEach((file) => formData.append("file", file));
 
     try {
-      const result: UploadResponse = await uploadFiles(formData);
+      const result = await api.uploadFiles(formData); // Use api.uploadFiles from centralized client
 
       if (result.success) {
         toast.success(`Dropped ${result.filecount} file(s) into the dark`, {

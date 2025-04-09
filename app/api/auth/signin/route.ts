@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UserModel } from "@/app/Backend/models/UserModel";
-import { comparePassword } from "@/app/Backend/lib/auth/auth";
+import {
+  comparePassword,
+  signToken,
+  signRefreshToken,
+  setCookie,
+} from "@/app/Backend/lib/auth/auth";
 import { connectDB } from "@/app/Backend/DB/DB";
 
 export async function POST(req: NextRequest) {
@@ -28,7 +33,11 @@ export async function POST(req: NextRequest) {
 
     if (!user.password) {
       return NextResponse.json(
-        { success: false, message: "No password set for this user" },
+        {
+          success: false,
+          message:
+            "No password set for this user. Try signing in with another method.",
+        },
         { status: 401 }
       );
     }
@@ -42,18 +51,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        user: {
-          id: user._id.toString(),
-          email: user.email,
-          username: user.username,
-        },
+    const accessToken = signToken({
+      email: user.email,
+      id: user._id.toString(),
+    });
+    const refreshToken = signRefreshToken({
+      email: user.email,
+      id: user._id.toString(),
+    });
+
+    let response = NextResponse.json({
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        username: user.username,
       },
-      { status: 200 }
-    );
+    });
+
+    response = setCookie(response, accessToken, refreshToken);
+
+    return response;
   } catch (error) {
+    console.error("Signin error:", error);
     return NextResponse.json(
       { success: false, message: "Server error during signin" },
       { status: 500 }

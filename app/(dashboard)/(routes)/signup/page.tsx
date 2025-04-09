@@ -1,3 +1,4 @@
+// src/app/signup/page.tsx
 "use client";
 
 import React from "react";
@@ -6,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SIGNUP_WIRING } from "@/app/Backend/Axios/wiring";
+import { api } from "@/app/Backend/services/axios"; // Adjusted path
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { USER_ZOD, UserZodType } from "@/app/Backend/zod/UserModel.zod";
@@ -33,7 +34,7 @@ const SignupPage = () => {
     try {
       const { username, email, password } = data;
       const signupData = { username, email, password };
-      await SIGNUP_WIRING(signupData);
+      await api.signup(signupData); // Use api.signup directly
       router.push("/dashboard");
       reset();
     } catch (error) {
@@ -54,7 +55,7 @@ const SignupPage = () => {
         router.push(result.url);
       }
     } catch (error) {
-     
+      console.error("Google sign-in error:", error);
     }
   };
 

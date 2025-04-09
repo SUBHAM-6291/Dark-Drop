@@ -1,11 +1,10 @@
+// app/api/auth/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, UploadResponse } from "@/app/Backend/imagekit/files";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel, IImage } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
 import { v4 as uuidv4 } from "uuid";
-
-
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,10 +16,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const decoded = verifyToken(token);
+    let decoded;
+    try {
+      decoded = verifyToken(token);
+    } catch (err) {
+      if (err instanceof Error && err.message === "Token expired") {
+        return NextResponse.json(
+          { success: false, error: "Token expired, please refresh" },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json(
+        { success: false, error: "Invalid token" },
+        { status: 401 }
+      );
+    }
+
     if (!decoded || typeof decoded === "string" || !("email" in decoded)) {
       return NextResponse.json(
-        { success: false, error: "Invalid or expired token" },
+        { success: false, error: "Invalid token payload" },
         { status: 401 }
       );
     }
@@ -58,13 +72,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: result.success,
-      urls: result.imageUrls,
-      filecount: result.filecount,
-      error: result.error,
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        success: result.success,
+        urls: result.imageUrls,
+        filecount: result.filecount,
+        error: result.error,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Failed to process files";
     return NextResponse.json(
