@@ -1,4 +1,3 @@
-// src/app/signup/page.tsx
 "use client";
 
 import React from "react";
@@ -7,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api } from "@/app/Backend/services/axios"; // Adjusted path
+import { api } from "@/app/Backend/services/axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { USER_ZOD, UserZodType } from "@/app/Backend/zod/UserModel.zod";
@@ -34,7 +33,7 @@ const SignupPage = () => {
     try {
       const { username, email, password } = data;
       const signupData = { username, email, password };
-      await api.signup(signupData); // Use api.signup directly
+      await api.signup(signupData);
       router.push("/dashboard");
       reset();
     } catch (error) {

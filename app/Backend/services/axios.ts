@@ -16,7 +16,18 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response.data,
-  (error: AxiosError) => {
+  async (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      try {
+        await apiClient.post("/auth/refresh");
+        if (error.config) {
+          return apiClient(error.config);
+        }
+        return Promise.reject(new Error("Request configuration is missing"));
+      } catch (refreshError) {
+        return Promise.reject(new Error("Session expired, please log in again"));
+      }
+    }
     const message = (error.response?.data as { error?: string })?.error || error.message || "Request failed";
     return Promise.reject(new Error(message));
   }
@@ -25,19 +36,19 @@ apiClient.interceptors.response.use(
 interface UserData {
   username: string;
   email: string;
-  password?: string; // Current password
+  password?: string;
   newPassword?: string;
   profilePic?: string;
 }
 
 interface UserResponse {
   message: string;
-  user: { id?: string; username: string; email: string; profilePic?: string }; // id optional as backend doesn’t return it
+  user: { id?: string; username: string; email: string; profilePic?: string };
 }
 
 interface UploadResponse {
   success: boolean;
-  urls?: string[];
+  imageUrls?: string[];
   filecount?: number;
   error?: string;
 }
@@ -49,14 +60,12 @@ interface SharedFilesResponse {
 }
 
 export const api = {
-  getUser: async (email: string): Promise<UserResponse> => {
-    return apiClient.get("/user", { params: { email } }); // Updated to include email query param
+  getUser: async (): Promise<UserResponse> => {
+    return apiClient.get("/auth/user");
   },
 
-  updateUser: async (data: FormData): Promise<UserResponse> => {
-    return apiClient.post("/user", data, { // Updated to POST /api/user
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+  updateUser: async (data: UserData): Promise<UserResponse> => {
+    return apiClient.put("/auth/user", data);
   },
 
   signup: async (data: { username: string; email: string; password: string }): Promise<UserResponse> => {

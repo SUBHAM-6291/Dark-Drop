@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { api } from "@/app/Backend/services/axios"; // Import your axios API
+import { api } from "@/app/Backend/services/axios";
 
 const signInSchema = z.object({
   usernameOrEmail: z.string().min(1, "Username or email is required"),
@@ -37,7 +37,6 @@ const SignInPage = () => {
       const response = await api.signin(data.usernameOrEmail, data.password);
       console.log("Signin response:", response);
 
-      // Assuming your signin endpoint returns a UserResponse-like structure
       if (response.message === "User data fetched successfully" || response.user) {
         router.push("/dashboard");
       } else {

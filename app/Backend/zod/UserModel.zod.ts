@@ -13,7 +13,7 @@ export const USER_ZOD = z.object({
     .toLowerCase(),
   password: z
     .string()
-    .min(8, 'Password must be at least 8 characters long'),
+    .min(3, 'Password must be at least 3 characters long'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",

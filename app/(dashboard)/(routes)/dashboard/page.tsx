@@ -5,7 +5,7 @@ import { Toaster } from "react-hot-toast";
 import UploadSidebarContent from "@/app/_components/dashboard/uploadsidebar";
 import SharedFilesContent from "@/app/_components/dashboard/sharedfiles";
 import SettingsContent from "@/app/_components/dashboard/settingscontent";
-import { api } from "@/app/Backend/services/axios"; // Adjusted to use the centralized Axios client
+import { api } from "@/app/Backend/services/axios";
 
 const Page = () => {
   const [activeSection, setActiveSection] = useState("Upload Files");
@@ -28,13 +28,13 @@ const Page = () => {
 
   const handleUploadSuccess = (urls: string[]) => {
     setUploadedImageUrls((prev) => [...prev, ...urls]);
-    fetchSharedFilesData(); // Refresh shared files after upload
+    fetchSharedFilesData();
   };
 
   const fetchSharedFilesData = async () => {
     setIsLoading(true);
     try {
-      const data = await api.fetchSharedFiles(); // Use the api object from axios.ts
+      const data = await api.fetchSharedFiles();
       if (data.success) {
         setSharedFiles(data.files);
       } else {
@@ -49,7 +49,7 @@ const Page = () => {
 
   const handleDelete = async (urlToDelete: string) => {
     try {
-      const data = await api.deleteSharedFile(urlToDelete); // Use the api object
+      const data = await api.deleteSharedFile(urlToDelete);
       if (data.success) {
         setSharedFiles((prev) => prev.filter((file) => file.url !== urlToDelete));
       } else {
@@ -62,13 +62,12 @@ const Page = () => {
 
   useEffect(() => {
     if (activeSection === "Shared Files") {
-      fetchSharedFilesData(); // Fetch files when switching to Shared Files section
+      fetchSharedFilesData();
     }
   }, [activeSection]);
 
   return (
     <div className="flex min-h-screen w-full bg-black text-white font-sans">
-      {/* Sidebar */}
       <div
         className={`fixed inset-y-0 left-0 w-64 bg-black text-white border-r border-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out z-50
           ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}
@@ -90,7 +89,7 @@ const Page = () => {
                 key={item.label}
                 onClick={() => {
                   setActiveSection(item.label);
-                  setIsSidebarOpen(false); // Close sidebar on mobile after selection
+                  setIsSidebarOpen(false);
                 }}
                 className={`w-full text-left py-3 px-4 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center gap-3 text-white
                   ${activeSection === item.label ? "bg-gray-800 shadow-inner" : ""}`}
@@ -108,7 +107,6 @@ const Page = () => {
         </div>
       </div>
 
-      {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
@@ -116,7 +114,6 @@ const Page = () => {
         ></div>
       )}
 
-      {/* Main Content */}
       <main className="flex-1 p-8 bg-black w-full h-full overflow-auto">
         <button
           className="md:hidden fixed top-4 left-4 z-50 text-white text-2xl"
@@ -157,7 +154,6 @@ const Page = () => {
         </div>
       </main>
 
-      {/* Toast Notifications */}
       <Toaster
         position="top-right"
         toastOptions={{

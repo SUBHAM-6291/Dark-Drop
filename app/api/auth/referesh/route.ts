@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error("Refresh token verification error:", err);
       return NextResponse.json(
-        { success: false, error: err instanceof Error ? err.message : "Unknown error" },
+        { success: false, error: err instanceof Error ? err.message : "Invalid refresh token" },
         { status: 401 }
       );
     }
@@ -37,7 +37,10 @@ export async function POST(request: NextRequest) {
     const newAccessToken = signToken({ email: decoded.email, id: decoded.id });
     const newRefreshToken = signRefreshToken({ email: decoded.email, id: decoded.id });
 
-    let response = NextResponse.json({ success: true });
+    let response = NextResponse.json({ 
+      success: true,
+      accessToken: newAccessToken
+    });
     response = setCookie(response, newAccessToken, newRefreshToken);
 
     return response;

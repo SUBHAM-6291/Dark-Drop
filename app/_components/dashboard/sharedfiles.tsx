@@ -2,7 +2,7 @@
 
 import React from "react";
 import toast from "react-hot-toast";
-import { api } from "@/app/Backend/services/axios"; // Standardized import path
+import { api } from "@/app/Backend/services/axios";
 
 interface SharedFile {
   url: string;
@@ -25,11 +25,11 @@ const SharedFilesContent: React.FC<SharedFilesContentProps> = ({
   const [editingUrl, setEditingUrl] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    setEditableFiles(sharedFiles); // Sync local state with prop changes
+    setEditableFiles(sharedFiles);
   }, [sharedFiles]);
 
   const handleEditStart = (url: string) => {
-    setEditingUrl(url); // Start editing mode for this file
+    setEditingUrl(url);
   };
 
   const handleEditChange = (url: string, newFilename: string) => {
@@ -37,24 +37,24 @@ const SharedFilesContent: React.FC<SharedFilesContentProps> = ({
       prev.map((file) =>
         file.url === url ? { ...file, filename: newFilename } : file
       )
-    ); // Update filename in local state
+    );
   };
 
   const handleEditSave = async (url: string) => {
     const newFilename = editableFiles.find((f) => f.url === url)?.filename;
     if (newFilename) {
       try {
-        await api.updateSharedFileName(url, newFilename); // Use centralized api method
+        await api.updateSharedFileName(url, newFilename);
         toast.success("Filename updated successfully", {
           style: { background: "#1f1f1f", color: "#22c55e" },
         });
-        setEditingUrl(null); // Exit editing mode
+        setEditingUrl(null);
       } catch (error: any) {
         console.error("Error saving filename:", error);
         toast.error(error.message || "Failed to update filename", {
           style: { background: "#1f1f1f", color: "#ef4444" },
         });
-        setEditableFiles(sharedFiles); // Revert to original state on error
+        setEditableFiles(sharedFiles);
       }
     }
   };
@@ -66,7 +66,7 @@ const SharedFilesContent: React.FC<SharedFilesContentProps> = ({
           Shared Files
         </h3>
         <p className="text-sm text-gray-300 italic mt-2">
-          "Echoes of the Abyss Unveiled"
+        Darkness Holds Your Drop
         </p>
       </div>
 
