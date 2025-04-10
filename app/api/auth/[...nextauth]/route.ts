@@ -1,11 +1,18 @@
-import NextAuth, { NextAuthOptions, User as NextAuthUser, Account, Session } from 'next-auth';
+import NextAuth, { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { UserModel } from '@/app/Backend/models/UserModel';
 import { connectDB } from '@/app/Backend/DB/DB';
-import bcrypt from 'bcryptjs';
+import { hashPassword, comparePassword } from '@/app/Backend/lib/auth/auth';
 
 declare module 'next-auth' {
+  interface User {
+    id: string;
+    username: string;
+    email: string;
+    name: string | null;
+  }
+
   interface Session {
     user: {
       id: string;
@@ -20,7 +27,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     username: string;
-    email?: string;
+    email: string;
   }
 }
 
@@ -29,40 +36,48 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-      ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? {} : {
-        authorize: async () => { throw new Error('Google credentials not configured'); },
-      }),
+      authorization: { params: { prompt: 'consent', access_type: 'offline' } },
     }),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        username: { label: 'Username', type: 'text' },
+        action: { label: 'Action', type: 'hidden' },
       },
       async authorize(credentials) {
-        try {
-          if (!credentials?.email || !credentials?.password) {
-            throw new Error('Missing credentials');
-          }
-          await connectDB();
-          const user = await UserModel.findOne({ email: credentials.email }).select('+password');
-          if (!user || !user.password) {
+        await connectDB();
+        const { email, password, username, action } = credentials || {};
+
+        if (!email) throw new Error('Email is required');
+
+        let user = await UserModel.findOne({ email }).select('+password');
+
+        if (action === 'signup') {
+          if (!username) throw new Error('Username is required for signup');
+          if (!password) throw new Error('Password is required for signup');
+          if (user) throw new Error('User already exists');
+
+          const hashedPassword = await hashPassword(password);
+          user = await UserModel.create({
+            email,
+            username,
+            password: hashedPassword,
+          });
+        } else {
+          if (!password) throw new Error('Password is required');
+          if (!user || !user.password || !(await comparePassword(password, user.password))) {
             throw new Error('Invalid credentials');
           }
-          const isValid = await bcrypt.compare(credentials.password, user.password);
-          if (!isValid) {
-            throw new Error('Invalid credentials');
-          }
-          return {
-            id: user._id.toString(),
-            email: user.email,
-            name: user.name ?? null,
-            username: user.username,
-          };
-        } catch (error) {
-          console.error('Authorize error:', error);
-          return null;
         }
+
+        return {
+          id: user._id.toString(),
+          email: user.email,
+          username: user.username,
+          name: user.name ?? null,
+        };
       },
     }),
   ],
@@ -72,28 +87,23 @@ export const authOptions: NextAuthOptions = {
     error: '/auth/error',
   },
   callbacks: {
-    async signIn({ user, account }: { user: NextAuthUser; account: Account | null }) {
-      if (!account?.provider) return false;
-      const allowedProviders = ['google', 'credentials'] as const;
-      if (!allowedProviders.includes(account.provider as any)) return false;
-      try {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google') {
         await connectDB();
         let dbUser = await UserModel.findOne({ email: user.email });
-        if (!dbUser && account.provider === 'google') {
+        if (!dbUser) {
           dbUser = await UserModel.create({
             email: user.email,
-            name: user.name || '',
             username: user.email?.split('@')[0] || `user_${Date.now()}`,
-            password: '',
+            name: user.name,
           });
         }
-        return true;
-      } catch (error) {
-        console.error('Sign-in error:', error);
-        return false;
+        user.id = dbUser._id.toString();
+        user.username = dbUser.username;
       }
+      return true;
     },
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.username = user.username;
@@ -101,19 +111,13 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-    async session({ session, token }: { session: Session; token: any }) {
-      if (token?.email) {
-        await connectDB();
-        const dbUser = await UserModel.findOne({ email: token.email });
-        if (dbUser) {
-          session.user = {
-            id: dbUser._id.toString(),
-            username: dbUser.username,
-            email: dbUser.email,
-            name: dbUser.name ?? null,
-          };
-        }
-      }
+    async session({ session, token }) {
+      session.user = {
+        id: token.id,
+        username: token.username,
+        email: token.email,
+        name: session.user.name ?? null,
+      };
       return session;
     },
   },
