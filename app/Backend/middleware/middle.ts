@@ -1,25 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { NextRequest, NextResponse } from "next/server";
+import { verifyToken } from "../lib/auth/auth";
+import { TokenPayload } from "../lib/auth/Types/authtoken";
 
-const rateLimiter = new RateLimiterMemory({
-  points: 5,
-  duration: 60,
-});
+export async function authMiddleware(req: NextRequest, next: () => Promise<NextResponse>) {
+  const token = req.cookies.get("token")?.value;
 
-export default async function middleware(req: NextRequest) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] 
+  if (!token) {
+    return NextResponse.redirect(
+      new URL("/signup?message=Please log in again because no token was provided", req.url)
+    );
+  }
 
   try {
-    await rateLimiter.consume(ip??'undefined');
-    return NextResponse.next();
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'Too many requests. Please wait a minute and try again.' },
-      { status: 429 }
+    const decoded = verifyToken(token) as TokenPayload;
+    (req as any).user = decoded;
+    return await next();
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Invalid token";
+    return NextResponse.redirect(
+      new URL(`/signup?message=Please log in again because: ${errorMessage}`, req.url)
     );
   }
 }
-
-export const config = {
-  matcher: '/api/:path*',
-};

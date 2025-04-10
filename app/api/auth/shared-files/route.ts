@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
+import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
+
+interface FileResponse {
+  url: string;
+  filename: string;
+  date: string;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,25 +20,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let decoded;
+    let decoded: TokenPayload;
     try {
       decoded = verifyToken(token);
     } catch (err) {
-      if (err instanceof Error && err.message === "Token expired") {
-        return NextResponse.json(
-          { success: false, error: "Token expired, please refresh" },
-          { status: 401 }
-        );
-      }
+      const errorMessage = err instanceof Error ? err.message : "Invalid token";
       return NextResponse.json(
-        { success: false, error: "Invalid token" },
+        { success: false, error: errorMessage },
         { status: 401 }
       );
     }
 
-    if (!decoded || typeof decoded === "string" || !("email" in decoded)) {
+    if (!decoded.email) {
       return NextResponse.json(
-        { success: false, error: "Invalid token payload" },
+        { success: false, error: "Token missing email" },
         { status: 401 }
       );
     }
@@ -45,7 +47,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, files: [] });
     }
 
-    const sharedFiles = userImages.images.map((file) => ({
+    const sharedFiles: FileResponse[] = userImages.images.map((file) => ({
       url: file.filePath,
       filename: file.fileName,
       date: file.uploadedAt.toISOString(),
@@ -53,9 +55,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, files: sharedFiles });
   } catch (error) {
-    console.error("Error fetching shared files:", error);
+    console.error("GET /auth/images error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { success: false, error: "Failed to fetch files" },
+      { success: false, error: `Failed to fetch files: ${errorMessage}` },
       { status: 500 }
     );
   }

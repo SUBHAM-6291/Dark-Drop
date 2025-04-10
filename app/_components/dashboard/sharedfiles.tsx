@@ -2,7 +2,7 @@
 
 import React from "react";
 import toast from "react-hot-toast";
-import { api } from "@/app/Backend/services/axios";
+import { apiService} from "@/app/Backend/services/axios";
 
 interface SharedFile {
   url: string;
@@ -44,7 +44,7 @@ const SharedFilesContent: React.FC<SharedFilesContentProps> = ({
     const newFilename = editableFiles.find((f) => f.url === url)?.filename;
     if (newFilename) {
       try {
-        await api.updateSharedFileName(url, newFilename);
+        await apiService.updateSharedFileName(url, newFilename);
         toast.success("Filename updated successfully", {
           style: { background: "#1f1f1f", color: "#22c55e" },
         });

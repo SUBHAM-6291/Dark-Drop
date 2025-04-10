@@ -1,68 +1,91 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/app/Backend/DB/DB';
-import { UserModel } from '@/app/Backend/models/UserModel';
-import { UserImagesModel } from '@/app/Backend/models/url.model';
-import { verifyToken, hashPassword } from '@/app/Backend/lib/auth/auth';
+import { NextRequest, NextResponse } from "next/server";
+import { connectDB } from "@/app/Backend/DB/DB";
+import { UserModel } from "@/app/Backend/models/UserModel";
+import { UserImagesModel } from "@/app/Backend/models/url.model";
+import { verifyToken, hashPassword } from "@/app/Backend/lib/auth/auth";
+import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
+
+interface User {
+  username: string;
+  email: string | null;
+  password?: string;
+  name?: string | null;
+}
+
+interface UserResponse {
+  username: string;
+  email: string | null;
+}
 
 export async function GET(req: NextRequest) {
   try {
-    const token = req.cookies.get('token')?.value;
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const decoded = verifyToken(token);
-    if (!decoded || typeof decoded === 'string' || !('id' in decoded)) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    const token = req.cookies.get("token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    await connectDB();
-    const user = await UserModel.findById(decoded.id).select('-password');
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const decoded: TokenPayload = verifyToken(token);
 
-    return NextResponse.json({ 
-      user: {
-        username: user.username,
-        email: user.email,
-      }
-    });
+    await connectDB();
+    const user = await UserModel.findById(decoded.id).select("-password");
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const response: UserResponse = {
+      username: user.username,
+      email: user.email ?? null,
+    };
+
+    return NextResponse.json({ user: response });
   } catch (error) {
-    console.error('GET user error:', error);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    console.error("GET /auth/user error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown server error";
+    return NextResponse.json({ error: `Server error: ${errorMessage}` }, { status: 500 });
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
-    const token = req.cookies.get('token')?.value;
-    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-    const decoded = verifyToken(token);
-    if (!decoded || typeof decoded === 'string' || !('id' in decoded)) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    const token = req.cookies.get("token")?.value;
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const decoded: TokenPayload = verifyToken(token);
 
     const { username, email, password } = await req.json();
 
     if (!username || !email) {
-      return NextResponse.json({ error: 'Username and email are required' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Username and email are required" },
+        { status: 400 }
+      );
     }
 
     await connectDB();
 
-    const currentUser = await UserModel.findById(decoded.id).select('email');
-    if (!currentUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const currentUser = await UserModel.findById(decoded.id).select("email");
+    if (!currentUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     const emailChanged = currentUser.email !== email;
 
-    const updateData: any = { username, email };
-    if (password) updateData.password = await hashPassword(password);
+    const updateData: Partial<User> = { username, email };
+    if (password) {
+      updateData.password = await hashPassword(password);
+    }
 
     const user = await UserModel.findByIdAndUpdate(
       decoded.id,
       updateData,
       { new: true, runValidators: true }
-    ).select('-password');
+    ).select("-password");
 
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
 
     if (emailChanged) {
       const userImages = await UserImagesModel.findOneAndUpdate(
@@ -71,19 +94,26 @@ export async function PUT(req: NextRequest) {
         { new: true, upsert: true }
       );
       if (!userImages) {
-        console.error('Failed to update or create UserImages document');
+        console.error("Failed to update or create UserImages document");
+        return NextResponse.json(
+          {
+            message: "Profile updated, but failed to update user images",
+            user: { username: user.username, email: user.email ?? null },
+          },
+          { status: 207 }
+        );
       }
     }
 
-    return NextResponse.json({ 
-      message: 'Profile updated',
-      user: { 
-        username: user.username, 
-        email: user.email,
-      }
-    });
+    const response: UserResponse = {
+      username: user.username,
+      email: user.email ?? null,
+    };
+
+    return NextResponse.json({ message: "Profile updated", user: response });
   } catch (error) {
-    console.error('PUT user error:', error);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    console.error("PUT /auth/user error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown server error";
+    return NextResponse.json({ error: `Server error: ${errorMessage}` }, { status: 500 });
   }
 }

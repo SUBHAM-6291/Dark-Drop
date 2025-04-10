@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { api } from "@/app/Backend/services/axios";
+import { apiService } from "@/app/Backend/services/axios";
 import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 
@@ -36,7 +36,7 @@ const SignInPage = () => {
 
   const onSubmit = async (data: SignInFormData) => {
     try {
-      const response = await api.signin(data.usernameOrEmail, data.password);
+      const response = await apiService.signin(data.usernameOrEmail, data.password);
       console.log("Signin response:", response);
 
       if (response.message === "User data fetched successfully" || response.user) {

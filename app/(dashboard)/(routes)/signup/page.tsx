@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -7,11 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { api } from "@/app/Backend/services/axios";
+import { apiService } from "@/app/Backend/services/axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { USER_ZOD, UserZodType } from "@/app/Backend/zod/UserModel.zod";
 import { signIn } from "next-auth/react";
+import toast, { Toaster } from "react-hot-toast";
 
 const SignupPage = () => {
   const router = useRouter();
@@ -34,11 +34,13 @@ const SignupPage = () => {
     try {
       const { username, email, password } = data;
       const signupData = { username, email, password };
-      await api.signup(signupData);
+      await apiService.signup(signupData);
+      toast.success("Signup successful! Redirecting to dashboard...");
       router.push("/dashboard");
       reset();
-    } catch (error) {
-      console.error("Signup error:", error);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || "This username and email are already in use by another person. Please choose a different username and email to continue. ";
+      toast.error(errorMessage);
     }
   };
 
@@ -50,17 +52,19 @@ const SignupPage = () => {
       });
 
       if (result?.error) {
-        console.error("Google sign-in error:", result.error);
+        toast.error(`Google sign-in failed: ${result.error}`);
       } else if (result?.url) {
+        toast.success("Google sign-in successful! Redirecting...");
         router.push(result.url);
       }
-    } catch (error) {
-      console.error("Google sign-in error:", error);
+    } catch (error: any) {
+      toast.error("An error occurred during Google sign-in");
     }
   };
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
+      <Toaster position="top-right" reverseOrder={false} />
       <div className="w-full max-w-md bg-black border border-gray-800 rounded-xl p-8 shadow-xl shadow-gray-900/60">
         <div className="text-center mb-6 flex flex-col items-center">
           <div className="flex items-center gap-2">

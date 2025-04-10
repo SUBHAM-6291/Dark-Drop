@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from 'react';
-import { api } from '@/app/Backend/services/axios';
+import { apiService } from '@/app/Backend/services/axios';
 
 const SettingsContent: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
@@ -19,7 +19,7 @@ const SettingsContent: React.FC = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await api.getUser();
+      const response = await apiService.getUser();
       setUserData({
         username: response.user.username,
         email: response.user.email,
@@ -48,7 +48,7 @@ const SettingsContent: React.FC = () => {
         ...(userData.password && { password: userData.password }),
       };
 
-      const response = await api.updateUser(updateData);
+      const response = await apiService.updateUser(updateData);
       setMessage(response.message);
       setIsEditing(false);
       await fetchUserData();

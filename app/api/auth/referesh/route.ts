@@ -5,6 +5,7 @@ import {
   signRefreshToken,
   verifyRefreshToken,
 } from "@/app/Backend/lib/auth/auth";
+import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,38 +17,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let decoded;
+    let decoded: TokenPayload;
     try {
       decoded = verifyRefreshToken(refreshToken);
     } catch (err) {
-      console.error("Refresh token verification error:", err);
+      const errorMessage = err instanceof Error ? err.message : "Invalid refresh token";
       return NextResponse.json(
-        { success: false, error: err instanceof Error ? err.message : "Invalid refresh token" },
+        { success: false, error: errorMessage },
         { status: 401 }
       );
     }
 
-    if (typeof decoded === "string" || !("email" in decoded) || !("id" in decoded)) {
+    if (!decoded.id || !decoded.username || decoded.email === null) {
       return NextResponse.json(
         { success: false, error: "Invalid refresh token payload" },
         { status: 401 }
       );
     }
 
-    const newAccessToken = signToken({ email: decoded.email, id: decoded.id });
-    const newRefreshToken = signRefreshToken({ email: decoded.email, id: decoded.id });
+    const payload: TokenPayload = {
+      id: decoded.id,
+      username: decoded.username,
+      email: decoded.email,
+    };
 
-    let response = NextResponse.json({ 
+    const newAccessToken = signToken(payload);
+    const newRefreshToken = signRefreshToken(payload);
+
+    let response = NextResponse.json({
       success: true,
-      accessToken: newAccessToken
+      message: "Tokens refreshed successfully",
     });
     response = setCookie(response, newAccessToken, newRefreshToken);
 
     return response;
   } catch (error) {
-    console.error("Refresh error:", error);
+    console.error("POST /auth/refresh error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { success: false, error: "Failed to refresh token" },
+      { success: false, error: `Failed to refresh token: ${errorMessage}` },
       { status: 500 }
     );
   }

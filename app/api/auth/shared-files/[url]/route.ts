@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
+import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
 
 export async function DELETE(
   request: NextRequest,
@@ -16,25 +17,20 @@ export async function DELETE(
       );
     }
 
-    let decoded;
+    let decoded: TokenPayload;
     try {
       decoded = verifyToken(token);
     } catch (err) {
-      if (err instanceof Error && err.message === "Token expired") {
-        return NextResponse.json(
-          { success: false, error: "Token expired, please refresh" },
-          { status: 401 }
-        );
-      }
+      const errorMessage = err instanceof Error ? err.message : "Invalid token";
       return NextResponse.json(
-        { success: false, error: "Invalid token" },
+        { success: false, error: errorMessage },
         { status: 401 }
       );
     }
 
-    if (!decoded || typeof decoded === "string" || !("email" in decoded)) {
+    if (!decoded.email) {
       return NextResponse.json(
-        { success: false, error: "Invalid token payload" },
+        { success: false, error: "Token missing email" },
         { status: 401 }
       );
     }
@@ -50,7 +46,7 @@ export async function DELETE(
     );
 
     if (result.modifiedCount === 1) {
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, message: "File deleted" });
     } else {
       return NextResponse.json(
         { success: false, error: "File not found" },
@@ -58,9 +54,10 @@ export async function DELETE(
       );
     }
   } catch (error) {
-    console.error("Error deleting file:", error);
+    console.error("DELETE /auth/[url] error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { success: false, error: "Failed to delete file" },
+      { success: false, error: `Failed to delete file: ${errorMessage}` },
       { status: 500 }
     );
   }
@@ -79,25 +76,20 @@ export async function PUT(
       );
     }
 
-    let decoded;
+    let decoded: TokenPayload;
     try {
       decoded = verifyToken(token);
     } catch (err) {
-      if (err instanceof Error && err.message === "Token expired") {
-        return NextResponse.json(
-          { success: false, error: "Token expired, please refresh" },
-          { status: 401 }
-        );
-      }
+      const errorMessage = err instanceof Error ? err.message : "Invalid token";
       return NextResponse.json(
-        { success: false, error: "Invalid token" },
+        { success: false, error: errorMessage },
         { status: 401 }
       );
     }
 
-    if (!decoded || typeof decoded === "string" || !("email" in decoded)) {
+    if (!decoded.email) {
       return NextResponse.json(
-        { success: false, error: "Invalid token payload" },
+        { success: false, error: "Token missing email" },
         { status: 401 }
       );
     }
@@ -121,7 +113,7 @@ export async function PUT(
     );
 
     if (result.modifiedCount === 1) {
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, message: "Filename updated" });
     } else {
       return NextResponse.json(
         { success: false, error: "File not found" },
@@ -129,9 +121,10 @@ export async function PUT(
       );
     }
   } catch (error) {
-    console.error("Error updating filename:", error);
+    console.error("PUT /auth/[url] error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { success: false, error: "Failed to update filename" },
+      { success: false, error: `Failed to update filename: ${errorMessage}` },
       { status: 500 }
     );
   }

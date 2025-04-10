@@ -5,7 +5,7 @@ import { Toaster } from "react-hot-toast";
 import UploadSidebarContent from "@/app/_components/dashboard/uploadsidebar";
 import SharedFilesContent from "@/app/_components/dashboard/sharedfiles";
 import SettingsContent from "@/app/_components/dashboard/settingscontent";
-import { api } from "@/app/Backend/services/axios";
+import { apiService } from "@/app/Backend/services/axios";
 
 const Page = () => {
   const [activeSection, setActiveSection] = useState("Upload Files");
@@ -34,7 +34,7 @@ const Page = () => {
   const fetchSharedFilesData = async () => {
     setIsLoading(true);
     try {
-      const data = await api.fetchSharedFiles();
+      const data = await apiService.fetchSharedFiles();
       if (data.success) {
         setSharedFiles(data.files);
       } else {
@@ -49,7 +49,7 @@ const Page = () => {
 
   const handleDelete = async (urlToDelete: string) => {
     try {
-      const data = await api.deleteSharedFile(urlToDelete);
+      const data = await apiService.deleteSharedFile(urlToDelete);
       if (data.success) {
         setSharedFiles((prev) => prev.filter((file) => file.url !== urlToDelete));
       } else {

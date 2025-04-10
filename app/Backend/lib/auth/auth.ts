@@ -2,83 +2,72 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import * as EmailValidator from "email-validator";
 import { NextResponse } from "next/server";
+import { TokenPayload } from "./Types/authtoken";
 
-// Load secrets from environment variables
-const JWT_SECRET = process.env.JWT_SECRET as string;
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET as string;
+const JWT_SECRET = process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET is missing in .env"); })();
+const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (() => { throw new Error("JWT_REFRESH_SECRET is missing in .env"); })();
 
-// Ensure secrets are defined
-if (!JWT_SECRET) {
-  throw new Error("Please add JWT_SECRET to your .env file");
-}
-if (!REFRESH_SECRET) {
-  throw new Error("Please add JWT_REFRESH_SECRET to your .env file");
-}
+const SALT_ROUNDS = 10;
 
-// Sign an access token (1-hour expiration)
-export function signToken(payload: object) {
+export function signToken(payload: TokenPayload): string {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: "1h" });
 }
 
-// Sign a refresh token (7-day expiration)
-export function signRefreshToken(payload: object) {
+export function signRefreshToken(payload: TokenPayload): string {
   return jwt.sign(payload, REFRESH_SECRET, { expiresIn: "7d" });
 }
 
-// Verify an access token with debugging
-export function verifyToken(token: string) {
-  console.log("Verifying token:", token); // Debug: Log the token being verified
+export function verifyToken(token: string): TokenPayload {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    console.log("Decoded token:", decoded); // Debug: Log the decoded payload
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
     return decoded;
   } catch (err) {
-    console.error("Token verification error:", err); // Debug: Log the full error
     if (err instanceof jwt.TokenExpiredError) {
-      console.error("Token expired at:", err.expiredAt);
       throw new Error("Token expired");
     }
     throw new Error("Invalid token");
   }
 }
 
-// Verify a refresh token with debugging
-export function verifyRefreshToken(token: string) {
-  console.log("Verifying refresh token:", token); // Debug: Log the refresh token
+export function verifyRefreshToken(token: string): TokenPayload {
   try {
-    const decoded = jwt.verify(token, REFRESH_SECRET);
-    console.log("Decoded refresh token:", decoded); // Debug: Log the decoded payload
+    const decoded = jwt.verify(token, REFRESH_SECRET) as TokenPayload;
     return decoded;
   } catch (err) {
-    console.error("Refresh token verification error:", err); // Debug: Log the full error
     if (err instanceof jwt.TokenExpiredError) {
-      console.error("Refresh token expired at:", err.expiredAt);
       throw new Error("Refresh token expired");
     }
     throw new Error("Invalid refresh token");
   }
 }
 
-// Password hashing configuration
-const saltRounds = 12;
-
-// Hash a password
-export const hashPassword = async (password: string) => {
-  const salt = await bcrypt.genSalt(saltRounds);
-  return await bcrypt.hash(password, salt);
+export const hashPassword = async (password: string): Promise<string> => {
+  if (!password || password.length < 8) {
+    throw new Error("Password must be at least 8 characters long");
+  }
+  try {
+    const salt = await bcrypt.genSalt(SALT_ROUNDS);
+    return await bcrypt.hash(password, salt);
+  } catch (err) {
+    throw new Error(`Failed to hash password: ${err instanceof Error ? err.message : "Unknown error"}`);
+  }
 };
 
-// Compare a password with its hash
-export const comparePassword = async (password: string, hash: string) => {
-  return await bcrypt.compare(password, hash);
+export const comparePassword = async (password: string, hash: string): Promise<boolean> => {
+  if (!password || !hash) {
+    throw new Error("Password and hash are required for comparison");
+  }
+  try {
+    return await bcrypt.compare(password, hash);
+  } catch (err) {
+    throw new Error(`Failed to compare password: ${err instanceof Error ? err.message : "Unknown error"}`);
+  }
 };
 
-// Validate an email address
-export const isValidEmail = (email: string) => {
+export const isValidEmail = (email: string): boolean => {
   return EmailValidator.validate(email);
 };
 
-// Set cookies for access and refresh tokens
 export const setCookie = <T>(
   res: NextResponse<T>,
   accessToken: string,
@@ -88,14 +77,14 @@ export const setCookie = <T>(
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 60 * 60 * 1000, // 1 hour in milliseconds
+    maxAge: 60 * 60 * 1000,
     path: "/",
   });
   res.cookies.set("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    maxAge: 7 * 24 * 60 * 60 * 1000,
     path: "/",
   });
   return res;

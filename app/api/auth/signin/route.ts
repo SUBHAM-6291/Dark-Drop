@@ -1,81 +1,116 @@
 import { NextRequest, NextResponse } from "next/server";
-import { UserModel } from "@/app/Backend/models/UserModel";
 import {
-  comparePassword,
+  hashPassword,
+  verifyToken,
   signToken,
   signRefreshToken,
   setCookie,
 } from "@/app/Backend/lib/auth/auth";
 import { connectDB } from "@/app/Backend/DB/DB";
+import { UserModel } from "@/app/Backend/models/UserModel";
+import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
+
+interface UserResponse {
+  id: string;
+  username: string;
+  email: string | null;
+}
 
 export async function POST(req: NextRequest) {
   try {
-    await connectDB();
-    const { usernameOrEmail, password } = await req.json();
+    const token =
+      req.cookies.get("token")?.value ??
+      req.headers.get("authorization")?.replace("Bearer ", "");
+    const { username, email, password } = await req.json();
 
-    if (!usernameOrEmail || !password) {
+    if (!email) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
+    }
+
+    await connectDB();
+
+    if (token) {
+      try {
+        const decoded: TokenPayload = verifyToken(token);
+        const existingUser = await UserModel.findOne({ email });
+        if (existingUser) {
+          const payload: TokenPayload = {
+            id: existingUser._id.toString(),
+            username: existingUser.username,
+            email: existingUser.email ?? null,
+          };
+          const accessToken = signToken(payload);
+          const refreshToken = signRefreshToken(payload);
+
+          let response = NextResponse.json({
+            message: "Access granted",
+            user: {
+              id: payload.id,
+              username: payload.username,
+              email: payload.email,
+            },
+          });
+          response = setCookie(response, accessToken, refreshToken);
+          return response;
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Invalid token";
+        console.log("Token verification failed:", errorMessage);
+      }
+    }
+
+    if (!username) {
       return NextResponse.json(
-        { success: false, message: "Missing username/email or password" },
+        { error: "Username is required for signup" },
+        { status: 400 }
+      );
+    }
+    if (!password) {
+      return NextResponse.json(
+        { error: "Password is required for signup" },
         { status: 400 }
       );
     }
 
-    const user = await UserModel.findOne({
-      $or: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
-    }).select("+password");
-
-    if (!user) {
+    const userExists = await UserModel.findOne({ email });
+    if (userExists) {
       return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 401 }
+        { error: "User already exists with this email" },
+        { status: 409 }
       );
     }
 
-    if (!user.password) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "No password set for this user. Try signing in with another method.",
-        },
-        { status: 401 }
-      );
-    }
-
-    const passwordMatch = await comparePassword(password, user.password);
-
-    if (!passwordMatch) {
-      return NextResponse.json(
-        { success: false, message: "Invalid password" },
-        { status: 401 }
-      );
-    }
-
-    const accessToken = signToken({
-      email: user.email,
-      id: user._id.toString(),
+    const hashedPassword = await hashPassword(password);
+    const newUser = await UserModel.create({
+      username,
+      email,
+      password: hashedPassword,
     });
-    const refreshToken = signRefreshToken({
-      email: user.email,
-      id: user._id.toString(),
-    });
+
+    const payload: TokenPayload = {
+      id: newUser._id.toString(),
+      username: newUser.username,
+      email: newUser.email ?? null,
+    };
+    const accessToken = signToken(payload);
+    const refreshToken = signRefreshToken(payload);
 
     let response = NextResponse.json({
-      success: true,
+      message: "Signup successful",
       user: {
-        id: user._id.toString(),
-        email: user.email,
-        username: user.username,
+        id: payload.id,
+        username: payload.username,
+        email: payload.email,
       },
     });
-
     response = setCookie(response, accessToken, refreshToken);
 
     return response;
   } catch (error) {
-    console.error("Signin error:", error);
+    console.error("POST /auth/signup error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { success: false, message: "Server error during signin" },
+      { error: "Signup failed", details: errorMessage },
       { status: 500 }
     );
   }

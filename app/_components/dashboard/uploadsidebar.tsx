@@ -2,8 +2,8 @@
 
 import React from "react";
 import toast from "react-hot-toast";
-import { api } from "@/app/Backend/services/axios";
-
+import { apiService } from "@/app/Backend/services/axios";
+import { UserData } from "@/app/Backend/services/types";
 interface UploadSidebarContentProps {
   imageUrls?: string[];
   onUploadSuccess?: (urls: string[]) => void;
@@ -35,7 +35,7 @@ const UploadSidebarContent: React.FC<UploadSidebarContentProps> = ({ imageUrls, 
     selectedFiles.forEach((file) => formData.append("file", file));
 
     try {
-      const result = await api.uploadFiles(formData);
+      const result = await apiService.uploadFiles(formData);
 
       if (result.success) {
         toast.success(`Dropped ${result.filecount} file(s) into the dark`, {

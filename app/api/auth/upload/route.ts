@@ -3,6 +3,7 @@ import { handleUpload, UploadResponse } from "@/app/Backend/imagekit/files";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel, IImage } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
+import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: NextRequest) {
@@ -15,30 +16,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let decoded;
+    let decoded: TokenPayload;
     try {
       decoded = verifyToken(token);
     } catch (err) {
-      if (err instanceof Error && err.message === "Token expired") {
-        return NextResponse.json(
-          { success: false, error: "Token expired, please refresh" },
-          { status: 401 }
-        );
-      }
+      const errorMessage = err instanceof Error ? err.message : "Invalid token";
       return NextResponse.json(
-        { success: false, error: "Invalid token" },
-        { status: 401 }
-      );
-    }
-
-    if (!decoded || typeof decoded === "string" || !("email" in decoded)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid token payload" },
+        { success: false, error: errorMessage },
         { status: 401 }
       );
     }
 
     const email = decoded.email;
+    if (!email) {
+      return NextResponse.json(
+        { success: false, error: "Token missing email" },
+        { status: 401 }
+      );
+    }
 
     await connectDB();
 
@@ -71,19 +66,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      {
-        success: result.success,
-        urls: result.imageUrls,
-        filecount: result.filecount,
-        error: result.error,
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: result.success,
+      urls: result.imageUrls || [],
+      filecount: result.filecount || 0,
+      error: result.error || null,
+    });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Failed to process files";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown server error";
+    console.error("POST /auth/upload error:", error);
     return NextResponse.json(
-      { success: false, error: errorMessage },
+      { success: false, error: `Failed to upload files: ${errorMessage}` },
       { status: 500 }
     );
   }
