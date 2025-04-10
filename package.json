@@ -39,6 +39,7 @@
     "formdata-node": "^6.0.3",
     "formidable": "^3.5.2",
     "framer-motion": "^12.6.3",
+    "glob": "^11.0.1",
     "helmet": "^8.1.0",
     "imagekit": "^6.0.0",
     "imagekitio-next": "^1.0.1",
