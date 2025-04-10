@@ -54,7 +54,7 @@ export async function DELETE(
       );
     }
   } catch (error) {
-    console.error("DELETE /auth/[url] error:", error);
+    console.error("DELETE /auth/shared-files/[url] error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { success: false, error: `Failed to delete file: ${errorMessage}` },
@@ -65,7 +65,7 @@ export async function DELETE(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { url: string } }
+  { params }: { params: { url: string } } 
 ) {
   try {
     const token = request.cookies.get("token")?.value;
@@ -121,7 +121,7 @@ export async function PUT(
       );
     }
   } catch (error) {
-    console.error("PUT /auth/[url] error:", error);
+    console.error("PUT /auth/shared-files/[url] error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { success: false, error: `Failed to update filename: ${errorMessage}` },
