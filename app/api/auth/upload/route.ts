@@ -1,4 +1,3 @@
-// app/api/auth/upload/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, UploadResponse } from "@/app/Backend/imagekit/files";
 import { connectDB } from "@/app/Backend/DB/DB";

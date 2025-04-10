@@ -1,4 +1,3 @@
-// components/SettingsContent.tsx
 'use client'
 import React, { useState, useEffect } from 'react';
 import { api } from '@/app/Backend/services/axios';
@@ -52,7 +51,7 @@ const SettingsContent: React.FC = () => {
       const response = await api.updateUser(updateData);
       setMessage(response.message);
       setIsEditing(false);
-      await fetchUserData(); // Refresh data after save
+      await fetchUserData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

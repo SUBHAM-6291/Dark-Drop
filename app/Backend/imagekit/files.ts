@@ -32,14 +32,14 @@ export interface UploadResponse {
 }
 
 export async function uploadFile(file: File): Promise<UploadedFile> {
-  const MAX_FILE_SIZE = 5 * 1024 * 1024;
+  const MAX_FILE_SIZE = 20 * 1024 * 1024;
 
   if (!file) {
     throw new Error("No file provided");
   }
 
   if (file.size > MAX_FILE_SIZE) {
-    throw new Error(`File ${file.name} exceeds 5MB limit`);
+    throw new Error(`File ${file.name} exceeds 20MB limit`);
   }
 
   try {
