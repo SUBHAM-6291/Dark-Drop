@@ -119,3 +119,31 @@
   }
 }
 
+/* app/globals.css */
+@font-face {
+  font-family: 'Poppins';
+  src: url('@fontsource/poppins/files/poppins-latin-400-normal.woff2') format('woff2'),
+       url('@fontsource/poppins/files/poppins-latin-400-normal.woff') format('woff');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('@fontsource/poppins/files/poppins-latin-500-normal.woff2') format('woff2'),
+       url('@fontsource/poppins/files/poppins-latin-500-normal.woff') format('woff');
+  font-weight: 500;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('@fontsource/poppins/files/poppins-latin-700-normal.woff2') format('woff2'),
+       url('@fontsource/poppins/files/poppins-latin-700-normal.woff') format('woff');
+  font-weight: 700;
+  font-display: swap;
+}
+
+.font-poppins {
+  font-family: 'Poppins', sans-serif;
+}

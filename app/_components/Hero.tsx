@@ -4,19 +4,11 @@ import React from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Inter, Merriweather } from 'next/font/google';
 
-const inter = Inter({
-  subsets: ['latin'],
-  weight: ['700', '500'],
-  display: 'swap',
-});
-
-const merriweather = Merriweather({
-  subsets: ['latin'],
-  weight: '400',
-  display: 'swap',
-});
+// Import Poppins font
+import '@fontsource/poppins/700.css'; // For font-extrabold (h1)
+import '@fontsource/poppins/400.css'; // For regular text (p)
+import '@fontsource/poppins/500.css'; // For font-medium (button)
 
 const Hero = () => {
   return (
@@ -46,8 +38,7 @@ const Hero = () => {
         <div className="w-full md:w-1/2 text-center md:text-left px-8 py-12 z-10">
           <h1
             className={cn(
-              inter.className,
-              'text-4xl md:text-5xl font-extrabold mb-6 leading-tight bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent'
+              'font-poppins text-4xl md:text-5xl font-extrabold mb-6 leading-tight bg-gradient-to-r from-white to-gray-500 bg-clip-text text-transparent'
             )}
           >
             The Future of File Sharing Is Here
@@ -55,8 +46,7 @@ const Hero = () => {
 
           <p
             className={cn(
-              merriweather.className,
-              'text-lg md:text-xl text-gray-400 mb-10 leading-relaxed'
+              'font-poppins text-lg md:text-xl text-gray-400 mb-10 leading-relaxed'
             )}
           >
             Darkdrop delivers unmatched speed, ironclad security, and effortless collaboration—all wrapped in a sleek, dark interface.
@@ -65,8 +55,7 @@ const Hero = () => {
           <Button
             type="button"
             className={cn(
-              inter.className,
-              'bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-10 py-4',
+              'font-poppins bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-10 py-4',
               'hover:from-blue-800 hover:to-indigo-900 transition-all duration-300',
               'text-base font-medium rounded-full shadow-lg shadow-blue-900/30'
             )}
