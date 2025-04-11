@@ -3,7 +3,6 @@ import Link from "next/link";
 const Navbar: React.FC = () => {
   return (
     <nav className="bg-black p-4 flex justify-between items-center sticky top-0 z-50 w-full">
-      {/* Logo Section */}
       <div className="flex items-center space-x-3">
         <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-black rounded-md flex items-center justify-center border border-gray-700">
           <span className="text-white text-xl font-bold">D</span>
@@ -16,7 +15,6 @@ const Navbar: React.FC = () => {
         </Link>
       </div>
 
-      {/* Navigation Links */}
       <div className="flex gap-4 sm:gap-6">
         <Link
           href="/signin"
