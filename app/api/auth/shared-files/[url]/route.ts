@@ -6,7 +6,7 @@ import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { url: string } }
+  { params }: { params: Promise<{ url: string }> }
 ) {
   try {
     const token = request.cookies.get("token")?.value;
@@ -36,7 +36,8 @@ export async function DELETE(
     }
 
     const email = decoded.email;
-    const decodedUrl = decodeURIComponent(params.url);
+    const { url } = await params;
+    const decodedUrl = decodeURIComponent(url);
 
     await connectDB();
 
@@ -65,7 +66,7 @@ export async function DELETE(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { url: string } } 
+  { params }: { params: Promise<{ url: string }> }
 ) {
   try {
     const token = request.cookies.get("token")?.value;
@@ -95,7 +96,8 @@ export async function PUT(
     }
 
     const email = decoded.email;
-    const decodedUrl = decodeURIComponent(params.url);
+    const { url } = await params;
+    const decodedUrl = decodeURIComponent(url);
     const { filename } = await request.json();
 
     if (!filename || typeof filename !== "string") {
