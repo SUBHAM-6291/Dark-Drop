@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = await hashPassword(password) || undefined;
     const newUser = await UserModel.create({
       username,
       email,

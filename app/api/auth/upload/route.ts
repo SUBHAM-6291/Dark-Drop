@@ -5,26 +5,44 @@ import { UserImagesModel, IImage } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
 import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
 import { v4 as uuidv4 } from "uuid";
+import { useSession } from "next-auth/react";
+import { getServerSession } from "next-auth";
 
 export async function POST(request: NextRequest) {
-  try {
-    const token = request.cookies.get("token")?.value;
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      );
-    }
 
+  const session = await getServerSession();
+  const token = request.cookies.get("token")?.value as string;
+
+  const hasSession = session ? true : token ? true : false;
+
+  if (!hasSession) {
+    return NextResponse.json(
+      { success: false, error: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+  try {
     let decoded: TokenPayload;
-    try {
-      decoded = verifyToken(token);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Invalid token";
-      return NextResponse.json(
-        { success: false, error: errorMessage },
-        { status: 401 }
-      );
+
+    if (session) {
+
+      decoded = {
+        id: "",
+        email: session.user.email,
+        username: session.user.username,
+      }
+
+    } else {
+      try {
+        decoded = verifyToken(token);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Invalid token";
+        return NextResponse.json(
+          { success: false, error: errorMessage },
+          { status: 401 }
+        );
+      }
     }
 
     const email = decoded.email;

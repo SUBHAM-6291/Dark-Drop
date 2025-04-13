@@ -11,7 +11,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiService } from "@/app/Backend/services/axios";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import toast from "react-hot-toast";
 
 const signInSchema = z.object({
@@ -23,6 +23,9 @@ type SignInFormData = z.infer<typeof signInSchema>;
 
 const SignInPage = () => {
   const router = useRouter();
+
+  const session = useSession();
+
   const {
     register,
     handleSubmit,
@@ -83,6 +86,10 @@ const SignInPage = () => {
       });
     }
   };
+
+  if (session.data) {
+    router.push("/dashboard")
+  }
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">

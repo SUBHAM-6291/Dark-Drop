@@ -15,6 +15,10 @@ export const apiService = {
     return apiClient.put("/auth/user", data);
   },
 
+  logout: async () => {
+    return apiClient.post("/auth/logout");
+  },
+
   signup: async (data: {
     username: string;
     email: string;

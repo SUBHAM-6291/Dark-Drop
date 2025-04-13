@@ -4,6 +4,7 @@ import { UserModel } from "@/app/Backend/models/UserModel";
 import { UserImagesModel } from "@/app/Backend/models/url.model";
 import { verifyToken, hashPassword } from "@/app/Backend/lib/auth/auth";
 import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
+import { getServerSession } from "next-auth";
 
 interface User {
   username: string;
@@ -18,7 +19,21 @@ interface UserResponse {
 }
 
 export async function GET(req: NextRequest) {
+
+  const session = await getServerSession();
+
   try {
+
+    if (session) {
+      const response = {
+        username: session.user.email?.split('@')[0] || session.user.name,
+        email: session.user.email,
+      };
+  
+      return NextResponse.json({ user: response });
+    }
+
+
     const token = req.cookies.get("token")?.value;
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

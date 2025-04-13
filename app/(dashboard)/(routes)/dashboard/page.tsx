@@ -1,11 +1,12 @@
-"use client";
+"use client"
 
 import React, { useState, useEffect } from "react";
-import { Toaster } from "react-hot-toast";
+import toast, { Toaster } from "react-hot-toast";
 import UploadSidebarContent from "@/app/_components/dashboard/uploadsidebar";
 import SharedFilesContent from "@/app/_components/dashboard/sharedfiles";
 import SettingsContent from "@/app/_components/dashboard/settingscontent";
 import { apiService } from "@/app/Backend/services/axios";
+import { signOut } from "next-auth/react";
 
 const Page = () => {
   const [activeSection, setActiveSection] = useState("Upload Files");
@@ -59,12 +60,27 @@ const Page = () => {
       console.error("Error deleting file:", error.message);
     }
   };
+  
+  const handleLogout = async () => {
+    try {
+      
+      signOut({
+        callbackUrl: "/signin",
+        redirect: true,
+      });
+
+      // toast.success(data.data.message);
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }
 
   useEffect(() => {
     if (activeSection === "Shared Files") {
       fetchSharedFilesData();
     }
   }, [activeSection]);
+  
 
   return (
     <div className="flex min-h-screen w-full bg-black text-white font-sans">
@@ -99,6 +115,12 @@ const Page = () => {
               </button>
             ))}
           </nav>
+          <button
+            onClick={handleLogout}
+            className="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center gap-3 text-white"
+          >
+            Logout
+          </button>
         </div>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-gray-800 bg-black text-gray-400 text-xs">
