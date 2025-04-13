@@ -10,11 +10,12 @@ import { apiService } from "@/app/Backend/services/axios";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { USER_ZOD, UserZodType } from "@/app/Backend/zod/UserModel.zod";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import toast, { Toaster } from "react-hot-toast";
 
 const SignupPage = () => {
   const router = useRouter();
+  const session = useSession();
   const {
     register,
     handleSubmit,
@@ -61,6 +62,12 @@ const SignupPage = () => {
       toast.error("An error occurred during Google sign-in");
     }
   };
+
+  
+  if (session.data) {
+    router.push("/dashboard")
+  }
+
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">

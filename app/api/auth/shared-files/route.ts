@@ -3,6 +3,7 @@ import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
 import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
+import { getServerSession } from "next-auth";
 
 interface FileResponse {
   url: string;
@@ -11,16 +12,35 @@ interface FileResponse {
 }
 
 export async function GET(request: NextRequest) {
+
+  const session = await getServerSession();
+  const token = request.cookies.get("token")?.value as string;
+
+  const hasSession = session ? true : token ? true : false;
+
+  if (!hasSession) {
+    return NextResponse.json(
+      { success: false, error: "Authentication required" },
+      { status: 401 }
+    );
+  }
+
+
   try {
-    const token = request.cookies.get("token")?.value;
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      );
-    }
 
     let decoded: TokenPayload;
+
+    if (session) {
+
+      decoded = {
+        id: "",
+        email: session.user.email,
+        username: session.user.username,
+      }
+
+    } else {
+
+
     try {
       decoded = verifyToken(token);
     } catch (err) {
@@ -30,6 +50,7 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+  }
 
     if (!decoded.email) {
       return NextResponse.json(

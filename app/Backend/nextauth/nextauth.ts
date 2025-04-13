@@ -17,20 +17,15 @@ declare module 'next-auth' {
 }
 
 declare module 'next-auth/jwt' {
-  interface JWT extends TokenPayload {}
+  interface JWT extends TokenPayload { }
 }
 
 export const authOptions: NextAuthOptions = {
+
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || (() => { throw new Error('GOOGLE_CLIENT_ID is missing'); })(),
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || (() => { throw new Error('GOOGLE_CLIENT_SECRET is missing'); })(),
-      authorization: {
-        params: {
-          prompt: 'consent',
-          access_type: 'offline',
-        },
-      },
     }),
     CredentialsProvider({
       name: 'Credentials',
@@ -82,6 +77,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',
+
   },
 
   session: {
@@ -90,32 +86,37 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider === 'google') {
-        await connectDB();
-        let dbUser = await UserModel.findOne({ email: user.email });
 
-        if (!dbUser) {
-          if (!user.email) throw new Error('Google account email is required');
-          let baseUsername = user.email.split('@')[0] || `user_${Date.now()}`;
-          let username = baseUsername;
-          let counter = 1;
-          while (await UserModel.findOne({ username })) {
-            username = `${baseUsername}${counter++}`;
+
+    async signIn({ user, account, profile }) {
+
+      if (account?.provider === "google" && profile) {
+
+        if (!profile.email) throw new Error('Google account email is required');
+
+        await connectDB();
+
+        const email = profile.email;
+        let baseUsername = email.split('@')[0] || `user_${Date.now()}`;
+        let username = baseUsername;
+
+
+        const existingUser = await UserModel.findOne({ email })
+
+        if (existingUser) {
+          return true;
+        } else {
+          const details = {
+            username: username,
+            email: profile.email,
           }
 
-          dbUser = await UserModel.create({
-            email: user.email,
-            username,
-            name: user.name,
-          });
-        }
+          await UserModel.create(details);
 
-        user.id = dbUser._id.toString();
-        user.username = dbUser.username;
-        user.email = dbUser.email ?? null;
-        user.name = dbUser.name ?? null;
+          return true;
+        }
       }
+
       return true;
     },
 

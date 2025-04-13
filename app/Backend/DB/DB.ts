@@ -8,7 +8,7 @@ if (!MONGODB_URI) {
 
 export async function connectDB() {
   try {
-    await mongoose.connect(MONGODB_URI, {
+    await mongoose.connect(`${MONGODB_URI}/${process.env.MONGODB_DB}`, {
       maxPoolSize: 10
     });
     console.log("Connected to MongoDB successfully");
