@@ -60,27 +60,23 @@ const Page = () => {
       console.error("Error deleting file:", error.message);
     }
   };
-  
+
   const handleLogout = async () => {
     try {
-      
       signOut({
         callbackUrl: "/signin",
         redirect: true,
       });
-
-      // toast.success(data.data.message);
     } catch (error: any) {
-      toast.error(error.message)
+      toast.error(error.message);
     }
-  }
+  };
 
   useEffect(() => {
     if (activeSection === "Shared Files") {
       fetchSharedFilesData();
     }
   }, [activeSection]);
-  
 
   return (
     <div className="flex min-h-screen w-full bg-black text-white font-sans">
@@ -119,7 +115,8 @@ const Page = () => {
             onClick={handleLogout}
             className="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center gap-3 text-white"
           >
-            Logout
+            <span className="text-gray-400 text-lg">🏃</span>
+            <span className="text-white font-semibold">Logout</span>
           </button>
         </div>
 

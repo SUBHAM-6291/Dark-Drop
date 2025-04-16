@@ -40,7 +40,7 @@ const SignupPage = () => {
       router.push("/dashboard");
       reset();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || "This username and email are already in use by another person. Please choose a different username and email to continue. ";
+      const errorMessage = error.response?.data?.error || "Please log out first, then try to sign up again  ";
       toast.error(errorMessage);
     }
   };

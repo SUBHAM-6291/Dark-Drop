@@ -16,7 +16,7 @@ export const apiService = {
   },
 
   logout: async () => {
-    return apiClient.post("/auth/logout");
+    return apiClient.post("/auth/signout");
   },
 
   signup: async (data: {

@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, model } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IImage {
   imageId: string;
@@ -18,7 +19,7 @@ const imageSchema = new Schema<IImage>({
   imageId: {
     type: String,
     required: [true, 'Image ID is required'],
-    unique: true,
+    default: uuidv4,
   },
   filePath: {
     type: String,
@@ -32,8 +33,18 @@ const imageSchema = new Schema<IImage>({
   uploadedAt: {
     type: Date,
     default: Date.now,
-  }
+  },
 }, { _id: false });
+
+imageSchema.pre('validate', function (next) {
+  const images = (this as any).images as IImage[];
+  const imageIds = images.map((img) => img.imageId);
+  const uniqueImageIds = new Set(imageIds);
+  if (imageIds.length !== uniqueImageIds.size) {
+    next(new Error('Duplicate imageId values found in images array'));
+  }
+  next();
+});
 
 const userImagesSchema = new Schema<IUserImages>({
   email: {
@@ -42,14 +53,17 @@ const userImagesSchema = new Schema<IUserImages>({
     trim: true,
     lowercase: true,
     match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
+    unique: true,
   },
   images: {
     type: [imageSchema],
     default: [],
-  }
+  },
 }, {
   timestamps: true,
 });
 
-export const UserImagesModel = (mongoose.models.UserImages || 
+userImagesSchema.index({ 'images.imageId': 1 }, { unique: false });
+
+export const UserImagesModel = (mongoose.models.UserImages ||
   model<IUserImages>('UserImages', userImagesSchema)) as mongoose.Model<IUserImages>;
