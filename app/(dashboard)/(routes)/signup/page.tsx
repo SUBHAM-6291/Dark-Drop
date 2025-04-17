@@ -135,9 +135,7 @@ const SignupPage = () => {
     }
   };
 
-  if (session) {
-    router.push("/dashboard");
-  }
+ 
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
