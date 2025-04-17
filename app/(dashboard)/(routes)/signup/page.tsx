@@ -87,7 +87,7 @@ const SignupPage = () => {
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error ||
-        "An error occurred during signup. Please try again.";
+        "first logout your old account otherwise change your browser becuse old tokens  issue you face ";
       toast.error(errorMessage);
 
       setBackendErrors({});

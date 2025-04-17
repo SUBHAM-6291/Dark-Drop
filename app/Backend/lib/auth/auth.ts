@@ -73,18 +73,35 @@ export const setCookie = <T>(
   accessToken: string,
   refreshToken: string
 ): NextResponse<T> => {
+  // Clear existing cookies
+  res.cookies.set("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 0, // Expire immediately
+    path: "/",
+  });
+  res.cookies.set("refreshToken", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 0, // Expire immediately
+    path: "/",
+  });
+
+  // Set new cookies
   res.cookies.set("token", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 60 * 60 * 1000,
+    maxAge: 60 * 60 * 1000, // 1 hour
     path: "/",
   });
   res.cookies.set("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     path: "/",
   });
   return res;
