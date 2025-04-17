@@ -6,11 +6,13 @@ import UploadSidebarContent from "@/app/_components/dashboard/uploadsidebar";
 import SharedFilesContent from "@/app/_components/dashboard/sharedfiles";
 import SettingsContent from "@/app/_components/dashboard/settingscontent";
 import { useRouter } from "next/navigation";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { apiService } from "@/app/Backend/services/axios";
+import Contact from "@/app/_components/dashboard/contact";
 
 const Page = () => {
   const router = useRouter();
+  const { status } = useSession(); // Use useSession to check session state
   const [activeSection, setActiveSection] = useState("Upload Files");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
@@ -24,6 +26,7 @@ const Page = () => {
     { label: "Shared Files", icon: "📤" },
     { label: "Settings", icon: "⚙️" },
     { label: "Sign Out", icon: "🏃" },
+    { label: "Contact", icon: "📬" },
   ];
 
   const toggleSidebar = () => {
@@ -67,11 +70,10 @@ const Page = () => {
   const handleSignout = async () => {
     setIsLoading(true);
     try {
-      await apiService.logout();
-      await signOut({ redirect: false });
+      await signOut({ redirect: false }); // Clear Next-Auth session
       toast.success("Logged out successfully!");
       router.push("/signin");
-      router.refresh();
+      router.refresh(); // Ensure client-side state is cleared
     } catch (error: any) {
       console.error("Signout error:", error);
       toast.error("Failed to sign out. Please try again.");
@@ -80,11 +82,33 @@ const Page = () => {
     }
   };
 
+  // Protect the dashboard by redirecting unauthenticated users
   useEffect(() => {
-    if (activeSection === "Shared Files") {
+    if (status === "unauthenticated") {
+      router.push("/signin");
+    }
+  }, [status, router]);
+
+  // Fetch shared files when active section changes
+  useEffect(() => {
+    if (activeSection === "Shared Files" && status === "authenticated") {
       fetchSharedFilesData();
     }
-  }, [activeSection]);
+  }, [activeSection, status]);
+
+  // Show loading state while session is being checked
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  // Prevent rendering if unauthenticated (redundant but ensures safety)
+  if (status === "unauthenticated") {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-black text-white font-sans">
@@ -171,7 +195,7 @@ const Page = () => {
               />
             ) : activeSection === "Settings" ? (
               <SettingsContent />
-            ) : (
+            ) :  activeSection === "Contact" ?(<Contact />):(
               <div className="text-center py-20">
                 <h2 className="text-2xl font-bold text-white mb-4">{activeSection}</h2>
                 <p className="text-gray-400">Coming soon to the shadows...</p>

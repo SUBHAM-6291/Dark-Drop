@@ -1,4 +1,3 @@
-// app/api/file-handlers/shared-files/[url]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel } from "@/app/Backend/models/url.model";
@@ -11,7 +10,7 @@ export async function PUT(
   try {
     const authResult = await authenticateRequest(request);
     if (authResult instanceof NextResponse) {
-      return authResult; // Return error response if authentication fails
+      return authResult;
     }
 
     const email = authResult.email;
@@ -63,7 +62,7 @@ export async function DELETE(
   try {
     const authResult = await authenticateRequest(request);
     if (authResult instanceof NextResponse) {
-      return authResult; // Return error response if authentication fails
+      return authResult;
     }
 
     const email = authResult.email;

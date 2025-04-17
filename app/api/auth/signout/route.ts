@@ -3,13 +3,38 @@ import { cookies } from "next/headers";
 
 export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
+    const cookieStore =await cookies();
 
-    cookieStore.delete("token");
-    cookieStore.delete("refreshToken");
-    cookieStore.delete("next-auth.session-token");
+    console.log("Cookies before logout:", cookieStore.getAll());
 
-    console.log("Cookies cleared: token, refreshToken, next-auth.session-token");
+    cookieStore.set("next-auth.session-token", "", {
+      path: "/",
+      expires: new Date(0),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    cookieStore.set("next-auth.csrf-token", "", {
+      path: "/",
+      expires: new Date(0),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    cookieStore.set("token", "", {
+      path: "/",
+      expires: new Date(0),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+    cookieStore.set("refreshToken", "", {
+      path: "/",
+      expires: new Date(0),
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    console.log("Cookies after logout:", cookieStore.getAll());
 
     return NextResponse.json({
       success: true,

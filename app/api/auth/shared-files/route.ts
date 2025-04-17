@@ -1,4 +1,3 @@
-// app/api/file-handlers/shared-files/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel } from "@/app/Backend/models/url.model";
@@ -14,7 +13,7 @@ export async function GET(request: NextRequest) {
   try {
     const authResult = await authenticateRequest(request);
     if (authResult instanceof NextResponse) {
-      return authResult; // Return error response if authentication fails
+      return authResult;
     }
 
     const email = authResult.email;
