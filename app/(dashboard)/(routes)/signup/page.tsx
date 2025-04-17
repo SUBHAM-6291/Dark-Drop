@@ -87,7 +87,7 @@ const SignupPage = () => {
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error ||
-        "first logout your old account otherwise change your browser becuse old tokens  issue you face ";
+        "Please log out of your old account or clear your browser data to resolve issues with old tokens";
       toast.error(errorMessage);
 
       setBackendErrors({});
