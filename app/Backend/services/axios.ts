@@ -4,7 +4,8 @@ import {
   UserData,
   UploadResponse,
   SharedFilesResponse,
-} from "./types"
+  AvailabilityResponse,
+} from "./types";
 
 export const apiService = {
   getUser: async (): Promise<UserResponse> => {
@@ -16,7 +17,15 @@ export const apiService = {
   },
 
   logout: async () => {
-    return apiClient.post("/auth/signout");
+    console.log("[apiService] Initiating logout");
+    try {
+      const response = await apiClient.post("/auth/signout");
+      console.log("[apiService] Logout response:", response);
+      return response;
+    } catch (error) {
+      console.error("[apiService] Logout error:", error);
+      throw error;
+    }
   },
 
   signup: async (data: {
@@ -37,7 +46,7 @@ export const apiService = {
   uploadFiles: async (formData: FormData): Promise<UploadResponse> => {
     return apiClient.post("/auth/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
-      timeout: 30000,
+      timeout: 40000,
     });
   },
 
@@ -58,5 +67,12 @@ export const apiService = {
     return apiClient.put(`/auth/shared-files/${encodeURIComponent(url)}`, {
       filename: newFilename,
     });
+  },
+
+  checkAvailability: async (data: {
+    username?: string;
+    email?: string;
+  }): Promise<AvailabilityResponse> => {
+    return apiClient.post("/auth/check-availability", data);
   },
 };

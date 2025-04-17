@@ -32,3 +32,8 @@ export interface SharedFilesResponse {
   }[];
   error?: string;
 }
+export interface AvailabilityResponse {
+  username?: string;
+  email?: string;
+  error?: string;
+}

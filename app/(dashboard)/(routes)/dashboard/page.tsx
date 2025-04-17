@@ -1,14 +1,16 @@
-"use client"
+"use client";
 
 import React, { useState, useEffect } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import UploadSidebarContent from "@/app/_components/dashboard/uploadsidebar";
 import SharedFilesContent from "@/app/_components/dashboard/sharedfiles";
 import SettingsContent from "@/app/_components/dashboard/settingscontent";
-import { apiService } from "@/app/Backend/services/axios";
+import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import { apiService } from "@/app/Backend/services/axios";
 
 const Page = () => {
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState("Upload Files");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
@@ -21,6 +23,7 @@ const Page = () => {
     { label: "Upload Files", icon: "⬆️" },
     { label: "Shared Files", icon: "📤" },
     { label: "Settings", icon: "⚙️" },
+    { label: "Sign Out", icon: "🏃" },
   ];
 
   const toggleSidebar = () => {
@@ -61,14 +64,19 @@ const Page = () => {
     }
   };
 
-  const handleLogout = async () => {
+  const handleSignout = async () => {
+    setIsLoading(true);
     try {
-      signOut({
-        callbackUrl: "/signin",
-        redirect: true,
-      });
+      await apiService.logout();
+      await signOut({ redirect: false });
+      toast.success("Logged out successfully!");
+      router.push("/signin");
+      router.refresh();
     } catch (error: any) {
-      toast.error(error.message);
+      console.error("Signout error:", error);
+      toast.error("Failed to sign out. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -100,24 +108,24 @@ const Page = () => {
               <button
                 key={item.label}
                 onClick={() => {
-                  setActiveSection(item.label);
-                  setIsSidebarOpen(false);
+                  if (item.label === "Sign Out") {
+                    handleSignout();
+                  } else {
+                    setActiveSection(item.label);
+                    setIsSidebarOpen(false);
+                  }
                 }}
+                disabled={isLoading && item.label === "Sign Out"}
                 className={`w-full text-left py-3 px-4 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center gap-3 text-white
-                  ${activeSection === item.label ? "bg-gray-800 shadow-inner" : ""}`}
+                  ${activeSection === item.label && item.label !== "Sign Out" ? "bg-gray-800 shadow-inner" : ""}`}
               >
                 <span className="text-gray-400 text-lg">{item.icon}</span>
-                <span className="text-white font-semibold">{item.label}</span>
+                <span className="text-white font-semibold">
+                  {isLoading && item.label === "Sign Out" ? "Signing Out..." : item.label}
+                </span>
               </button>
             ))}
           </nav>
-          <button
-            onClick={handleLogout}
-            className="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-800 transition-all duration-200 flex items-center gap-3 text-white"
-          >
-            <span className="text-gray-400 text-lg">🏃</span>
-            <span className="text-white font-semibold">Logout</span>
-          </button>
         </div>
 
         <div className="absolute bottom-0 w-full p-4 border-t border-gray-800 bg-black text-gray-400 text-xs">

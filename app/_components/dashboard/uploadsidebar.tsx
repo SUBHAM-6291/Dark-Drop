@@ -3,7 +3,7 @@
 import React from "react";
 import toast from "react-hot-toast";
 import { apiService } from "@/app/Backend/services/axios";
-import { UserData } from "@/app/Backend/services/types";
+
 interface UploadSidebarContentProps {
   imageUrls?: string[];
   onUploadSuccess?: (urls: string[]) => void;

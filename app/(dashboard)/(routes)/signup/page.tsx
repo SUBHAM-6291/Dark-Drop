@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,13 +12,22 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { USER_ZOD, UserZodType } from "@/app/Backend/zod/UserModel.zod";
 import { signIn, useSession } from "next-auth/react";
 import toast, { Toaster } from "react-hot-toast";
+import { debounce } from "lodash";
+
+interface BackendErrors {
+  username?: string;
+  email?: string;
+}
 
 const SignupPage = () => {
   const router = useRouter();
-  const session = useSession();
+  const { data: session } = useSession();
+  const [backendErrors, setBackendErrors] = useState<BackendErrors>({});
+
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
     reset,
   } = useForm<UserZodType>({
@@ -31,17 +40,80 @@ const SignupPage = () => {
     },
   });
 
-  const onSubmit = async (data: UserZodType) => {
+  const username = watch("username");
+  const email = watch("email");
+
+  const checkAvailability = useCallback(
+    debounce(async (field: "username" | "email", value: string) => {
+      if (!value || value.length < 3 || (field === "email" && !value.includes("@"))) {
+        setBackendErrors((prev) => ({ ...prev, [field]: undefined }));
+        return;
+      }
+
+      try {
+        const payload: { username?: string; email?: string } = { [field]: value };
+        const response = await apiService.checkAvailability(payload);
+        setBackendErrors((prev) => ({
+          ...prev,
+          [field]: response[field],
+        }));
+      } catch (error: any) {
+        console.error(`Error checking ${field} availability:`, error);
+        setBackendErrors((prev) => ({
+          ...prev,
+          [field]: `Failed to check ${field} availability.`,
+        }));
+      }
+    }, 500),
+    []
+  );
+
+  useEffect(() => {
+    checkAvailability("username", username);
+  }, [username, checkAvailability]);
+
+  useEffect(() => {
+    checkAvailability("email", email);
+  }, [email, checkAvailability]);
+
+  const handleFormSubmit = async (data: UserZodType) => {
     try {
       const { username, email, password } = data;
-      const signupData = { username, email, password };
-      await apiService.signup(signupData);
+      await apiService.signup({ username, email, password });
       toast.success("Signup successful! Redirecting to dashboard...");
+      setBackendErrors({});
       router.push("/dashboard");
       reset();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.error || "Please log out first, then try to sign up again  ";
+      const errorMessage =
+        error.response?.data?.error ||
+        "An error occurred during signup. Please try again.";
       toast.error(errorMessage);
+
+      setBackendErrors({});
+      if (
+        errorMessage ===
+        "This username and email are already taken by another user. Please choose a different username and email."
+      ) {
+        setBackendErrors({
+          username: "This username is already taken.",
+          email: "This email is already registered.",
+        });
+      } else if (
+        errorMessage ===
+        "This username is already taken. Please change your username."
+      ) {
+        setBackendErrors({
+          username: "This username is already taken.",
+        });
+      } else if (
+        errorMessage ===
+        "This email is already registered. Please use a different email."
+      ) {
+        setBackendErrors({
+          email: "This email is already registered.",
+        });
+      }
     }
   };
 
@@ -63,17 +135,15 @@ const SignupPage = () => {
     }
   };
 
-  
-  if (session.data) {
-    router.push("/dashboard")
+  if (session) {
+    router.push("/dashboard");
   }
-
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <Toaster position="top-right" reverseOrder={false} />
       <div className="w-full max-w-md bg-black border border-gray-800 rounded-xl p-8 shadow-xl shadow-gray-900/60">
-        <div className="text-center mb-6 flex flex-col items-center">
+        <header className="text-center mb-6 flex flex-col items-center">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-gradient-to-br from-gray-800 to-black rounded-md flex items-center justify-center border border-gray-700">
               <span className="text-white text-xl font-bold">D</span>
@@ -88,13 +158,13 @@ const SignupPage = () => {
           <p className="text-sm text-gray-300 mt-2">
             Welcome to the World’s Fastest File-Saving App
           </p>
-        </div>
+        </header>
 
         <h2 className="text-2xl font-semibold text-white mb-6 text-center">
           Create an Account
         </h2>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="username" className="text-white text-sm font-medium">
               Username
@@ -108,6 +178,9 @@ const SignupPage = () => {
             />
             {errors.username && (
               <p className="text-red-500 text-sm">{errors.username.message}</p>
+            )}
+            {backendErrors.username && (
+              <p className="text-red-500 text-sm">{backendErrors.username}</p>
             )}
           </div>
 
@@ -124,6 +197,9 @@ const SignupPage = () => {
             />
             {errors.email && (
               <p className="text-red-500 text-sm">{errors.email.message}</p>
+            )}
+            {backendErrors.email && (
+              <p className="text-red-500 text-sm">{backendErrors.email}</p>
             )}
           </div>
 
@@ -166,7 +242,7 @@ const SignupPage = () => {
 
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !!backendErrors.username || !!backendErrors.email}
             className="w-full bg-white text-black font-semibold rounded-md hover:bg-gray-100 hover:scale-105 transition-all duration-300 ease-in-out"
           >
             {isSubmitting ? "Signing Up..." : "Sign Up"}
@@ -179,7 +255,9 @@ const SignupPage = () => {
               <div className="w-full border-t border-gray-700"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-black text-gray-300">Or continue with</span>
+              <span className="px-2 bg-black text-gray-300">
+                Or continue with
+              </span>
             </div>
           </div>
 

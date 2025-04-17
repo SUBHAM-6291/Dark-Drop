@@ -11,13 +11,11 @@ const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Log before request
 apiClient.interceptors.request.use((config) => {
   console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
   return config;
 });
 
-// Handle response
 apiClient.interceptors.response.use(
   (response) => {
     console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
@@ -26,11 +24,15 @@ apiClient.interceptors.response.use(
     return response.data;
   },
   async (error) => {
-    if (error.response?.status === 401 && !error.config.url?.includes("/auth/refresh")) {
+    if (
+      error.response?.status === 401 &&
+      !error.config.url?.includes("/auth/refresh") &&
+      !error.config.url?.includes("/auth/signout")
+    ) {
       try {
         await apiClient.post("/auth/refresh");
         console.log("[API] Token refreshed successfully");
-        return apiClient(error.config); // Retry the original request
+        return apiClient(error.config);
       } catch (refreshError) {
         console.error("[API] Token refresh failed");
         throw new Error("Please log in again");

@@ -19,31 +19,53 @@ interface UserResponse {
 }
 
 export async function GET(req: NextRequest) {
-
-  const session = await getServerSession();
-
   try {
-
-    if (session) {
-      const response = {
-        username: session.user.email?.split('@')[0] || session.user.name,
-        email: session.user.email,
-      };
-  
-      return NextResponse.json({ user: response });
-    }
-
-
+    const session = await getServerSession();
     const token = req.cookies.get("token")?.value;
-    if (!token) {
+
+    const hasSession = session ? true : token ? true : false;
+
+    if (!hasSession) {
+      console.log("GET /auth/user: Authentication required");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const decoded: TokenPayload = verifyToken(token);
+    let decoded: TokenPayload;
+    if (session) {
+      if (!session.user?.email) {
+        console.log("GET /auth/user: Session missing email");
+        return NextResponse.json({ error: "Session missing email" }, { status: 401 });
+      }
+      decoded = {
+        id: "",
+        email: session.user.email,
+        username: session.user.name || session.user.email.split('@')[0],
+      };
+      const response: UserResponse = {
+        username: decoded.username!,
+        email: decoded.email,
+      };
+      console.log(`GET /auth/user: Returning user data for email=${decoded.email}`);
+      return NextResponse.json({ user: response });
+    }
+
+    try {
+      decoded = verifyToken(token!);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Invalid token";
+      console.log("GET /auth/user: Token verification failed:", errorMessage);
+      return NextResponse.json({ error: errorMessage }, { status: 401 });
+    }
+
+    if (!decoded.email) {
+      console.log("GET /auth/user: Token missing email");
+      return NextResponse.json({ error: "Token missing email" }, { status: 401 });
+    }
 
     await connectDB();
     const user = await UserModel.findById(decoded.id).select("-password");
     if (!user) {
+      console.log(`GET /auth/user: User not found for id=${decoded.id}`);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
@@ -52,6 +74,7 @@ export async function GET(req: NextRequest) {
       email: user.email ?? null,
     };
 
+    console.log(`GET /auth/user: Returning user data for email=${user.email}`);
     return NextResponse.json({ user: response });
   } catch (error) {
     console.error("GET /auth/user error:", error);
@@ -62,16 +85,46 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const session = await getServerSession();
     const token = req.cookies.get("token")?.value;
-    if (!token) {
+
+    const hasSession = session ? true : token ? true : false;
+
+    if (!hasSession) {
+      console.log("PUT /auth/user: Authentication required");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const decoded: TokenPayload = verifyToken(token);
+    let decoded: TokenPayload;
+    if (session) {
+      if (!session.user?.email) {
+        console.log("PUT /auth/user: Session missing email");
+        return NextResponse.json({ error: "Session missing email" }, { status: 401 });
+      }
+      decoded = {
+        id: "",
+        email: session.user.email,
+        username: session.user.name || session.user.email.split('@')[0],
+      };
+    } else {
+      try {
+        decoded = verifyToken(token!);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Invalid token";
+        console.log("PUT /auth/user: Token verification failed:", errorMessage);
+        return NextResponse.json({ error: errorMessage }, { status: 401 });
+      }
+    }
+
+    if (!decoded.email) {
+      console.log("PUT /auth/user: Token missing email");
+      return NextResponse.json({ error: "Token missing email" }, { status: 401 });
+    }
 
     const { username, email, password } = await req.json();
 
     if (!username || !email) {
+      console.log("PUT /auth/user: Username and email are required");
       return NextResponse.json(
         { error: "Username and email are required" },
         { status: 400 }
@@ -80,51 +133,65 @@ export async function PUT(req: NextRequest) {
 
     await connectDB();
 
-    const currentUser = await UserModel.findById(decoded.id).select("email");
-    if (!currentUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    let user;
+    if (session) {
+      user = await UserModel.findOne({ email: decoded.email }).select("email");
+      if (!user) {
+        console.log(`PUT /auth/user: User not found for email=${decoded.email}`);
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
+      decoded.id = user._id.toString();
+    } else {
+      user = await UserModel.findById(decoded.id).select("email");
+      if (!user) {
+        console.log(`PUT /auth/user: User not found for id=${decoded.id}`);
+        return NextResponse.json({ error: "User not found" }, { status: 404 });
+      }
     }
 
-    const emailChanged = currentUser.email !== email;
+    const emailChanged = user.email !== email;
 
     const updateData: Partial<User> = { username, email };
     if (password) {
       updateData.password = await hashPassword(password);
     }
 
-    const user = await UserModel.findByIdAndUpdate(
+    const updatedUser = await UserModel.findByIdAndUpdate(
       decoded.id,
       updateData,
       { new: true, runValidators: true }
     ).select("-password");
 
-    if (!user) {
+    if (!updatedUser) {
+      console.log(`PUT /auth/user: Failed to update user for id=${decoded.id}`);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     if (emailChanged) {
+      console.log(`PUT /auth/user: Updating UserImagesModel email from ${user.email} to ${email}`);
       const userImages = await UserImagesModel.findOneAndUpdate(
-        { email: currentUser.email },
+        { email: user.email },
         { email: email },
-        { new: true, upsert: true }
+        { new: true }
       );
       if (!userImages) {
-        console.error("Failed to update or create UserImages document");
+        console.error(`PUT /auth/user: Failed to update UserImagesModel for email=${email}`);
         return NextResponse.json(
           {
             message: "Profile updated, but failed to update user images",
-            user: { username: user.username, email: user.email ?? null },
+            user: { username: updatedUser.username, email: updatedUser.email ?? null },
           },
-          { status: 207 }
+          { status: 500 }
         );
       }
     }
 
     const response: UserResponse = {
-      username: user.username,
-      email: user.email ?? null,
+      username: updatedUser.username,
+      email: updatedUser.email ?? null,
     };
 
+    console.log(`PUT /auth/user: Profile updated for email=${updatedUser.email}`);
     return NextResponse.json({ message: "Profile updated", user: response });
   } catch (error) {
     console.error("PUT /auth/user error:", error);

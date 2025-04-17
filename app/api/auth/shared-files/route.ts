@@ -1,9 +1,8 @@
+// app/api/file-handlers/shared-files/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel } from "@/app/Backend/models/url.model";
-import { verifyToken } from "@/app/Backend/lib/auth/auth";
-import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
-import { getServerSession } from "next-auth";
+import { authenticateRequest } from "@/app/Backend/middleware/auth";
 
 interface FileResponse {
   url: string;
@@ -12,59 +11,18 @@ interface FileResponse {
 }
 
 export async function GET(request: NextRequest) {
-
-  const session = await getServerSession();
-  const token = request.cookies.get("token")?.value as string;
-
-  const hasSession = session ? true : token ? true : false;
-
-  if (!hasSession) {
-    return NextResponse.json(
-      { success: false, error: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
-
   try {
-
-    let decoded: TokenPayload;
-
-    if (session) {
-
-      decoded = {
-        id: "",
-        email: session.user.email,
-        username: session.user.username,
-      }
-
-    } else {
-
-
-    try {
-      decoded = verifyToken(token);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Invalid token";
-      return NextResponse.json(
-        { success: false, error: errorMessage },
-        { status: 401 }
-      );
-    }
-  }
-
-    if (!decoded.email) {
-      return NextResponse.json(
-        { success: false, error: "Token missing email" },
-        { status: 401 }
-      );
+    const authResult = await authenticateRequest(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response if authentication fails
     }
 
-    const email = decoded.email;
-
+    const email = authResult.email;
     await connectDB();
 
     const userImages = await UserImagesModel.findOne({ email });
     if (!userImages || !userImages.images.length) {
+      console.log(`GET /file-handlers/shared-files: No files found for email=${email}`);
       return NextResponse.json({ success: true, files: [] });
     }
 
@@ -74,9 +32,10 @@ export async function GET(request: NextRequest) {
       date: file.uploadedAt.toISOString(),
     }));
 
+    console.log(`GET /file-handlers/shared-files: Found ${sharedFiles.length} files for email=${email}`);
     return NextResponse.json({ success: true, files: sharedFiles });
   } catch (error) {
-    console.error("GET /auth/images error:", error);
+    console.error("GET /file-handlers/shared-files error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { success: false, error: `Failed to fetch files: ${errorMessage}` },
