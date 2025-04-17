@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
       decoded = {
         id: "",
         email: session.user.email,
-        username: session.user.name || session.user.email.split('@')[0],
+        username: session.user.name || session.user.email.split("@")[0],
       };
       const response: UserResponse = {
         username: decoded.username!,
@@ -104,7 +104,7 @@ export async function PUT(req: NextRequest) {
       decoded = {
         id: "",
         email: session.user.email,
-        username: session.user.name || session.user.email.split('@')[0],
+        username: session.user.name || session.user.email.split("@")[0],
       };
     } else {
       try {
@@ -168,20 +168,28 @@ export async function PUT(req: NextRequest) {
     }
 
     if (emailChanged) {
-      console.log(`PUT /auth/user: Updating UserImagesModel email from ${user.email} to ${email}`);
-      const userImages = await UserImagesModel.findOneAndUpdate(
-        { email: user.email },
-        { email: email },
-        { new: true }
+      console.log(
+        `PUT /auth/user: Attempting to update UserImagesModel email from ${user.email} to ${email}`
       );
-      if (!userImages) {
-        console.error(`PUT /auth/user: Failed to update UserImagesModel for email=${email}`);
-        return NextResponse.json(
-          {
-            message: "Profile updated, but failed to update user images",
-            user: { username: updatedUser.username, email: updatedUser.email ?? null },
-          },
-          { status: 500 }
+      try {
+        const userImages = await UserImagesModel.findOneAndUpdate(
+          { email: user.email.toLowerCase() },
+          { email: email.toLowerCase() },
+          { new: true }
+        );
+        if (!userImages) {
+          console.log(
+            `PUT /auth/user: No UserImagesModel found for email=${user.email}, no update performed`
+          );
+        } else {
+          console.log(
+            `PUT /auth/user: Successfully updated UserImagesModel for email=${email}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `PUT /auth/user: Error updating UserImagesModel for email=${email}`,
+          error
         );
       }
     }

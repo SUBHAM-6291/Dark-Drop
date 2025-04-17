@@ -5,14 +5,13 @@ import toast, { Toaster } from "react-hot-toast";
 import UploadSidebarContent from "@/app/_components/dashboard/uploadsidebar";
 import SharedFilesContent from "@/app/_components/dashboard/sharedfiles";
 import SettingsContent from "@/app/_components/dashboard/settingscontent";
-import { useRouter } from "next/navigation";
-import { signOut, useSession } from "next-auth/react";
-import { apiService } from "@/app/Backend/services/axios";
 import Contact from "@/app/_components/dashboard/contact";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
+import { apiService } from "@/app/Backend/services/axios";
 
 const Page = () => {
   const router = useRouter();
-  const { status } = useSession(); // Use useSession to check session state
   const [activeSection, setActiveSection] = useState("Upload Files");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [uploadedImageUrls, setUploadedImageUrls] = useState<string[]>([]);
@@ -45,9 +44,11 @@ const Page = () => {
       if (data.success) {
         setSharedFiles(data.files);
       } else {
+        toast.error("Failed to fetch shared files.");
         console.error("Failed to fetch files:", data.error);
       }
     } catch (error: any) {
+      toast.error("Error fetching shared files.");
       console.error("Error fetching shared files:", error.message);
     } finally {
       setIsLoading(false);
@@ -59,10 +60,13 @@ const Page = () => {
       const data = await apiService.deleteSharedFile(urlToDelete);
       if (data.success) {
         setSharedFiles((prev) => prev.filter((file) => file.url !== urlToDelete));
+        toast.success("File deleted successfully.");
       } else {
+        toast.error("Failed to delete file.");
         console.error("Failed to delete file:", data.error);
       }
     } catch (error: any) {
+      toast.error("Error deleting file.");
       console.error("Error deleting file:", error.message);
     }
   };
@@ -70,10 +74,10 @@ const Page = () => {
   const handleSignout = async () => {
     setIsLoading(true);
     try {
-      await signOut({ redirect: false }); // Clear Next-Auth session
+      await signOut({ redirect: false });
       toast.success("Logged out successfully!");
       router.push("/signin");
-      router.refresh(); // Ensure client-side state is cleared
+      router.refresh();
     } catch (error: any) {
       console.error("Signout error:", error);
       toast.error("Failed to sign out. Please try again.");
@@ -82,33 +86,11 @@ const Page = () => {
     }
   };
 
-  // Protect the dashboard by redirecting unauthenticated users
   useEffect(() => {
-    if (status === "unauthenticated") {
-      router.push("/signin");
-    }
-  }, [status, router]);
-
-  // Fetch shared files when active section changes
-  useEffect(() => {
-    if (activeSection === "Shared Files" && status === "authenticated") {
+    if (activeSection === "Shared Files") {
       fetchSharedFilesData();
     }
-  }, [activeSection, status]);
-
-  // Show loading state while session is being checked
-  if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
-
-  // Prevent rendering if unauthenticated (redundant but ensures safety)
-  if (status === "unauthenticated") {
-    return null;
-  }
+  }, [activeSection]);
 
   return (
     <div className="flex min-h-screen w-full bg-black text-white font-sans">
@@ -195,7 +177,9 @@ const Page = () => {
               />
             ) : activeSection === "Settings" ? (
               <SettingsContent />
-            ) :  activeSection === "Contact" ?(<Contact />):(
+            ) : activeSection === "Contact" ? (
+              <Contact />
+            ) : (
               <div className="text-center py-20">
                 <h2 className="text-2xl font-bold text-white mb-4">{activeSection}</h2>
                 <p className="text-gray-400">Coming soon to the shadows...</p>
