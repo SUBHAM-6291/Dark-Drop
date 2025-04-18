@@ -1,67 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleUpload, UploadResponse } from "@/app/Backend/imagekit/files";
+import { uploadMiddleware } from "@/app/Backend/middleware/imagekit/middleware";
 import { connectDB } from "@/app/Backend/DB/DB";
 import { UserImagesModel, IImage } from "@/app/Backend/models/url.model";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
 import { TokenPayload } from "@/app/Backend/lib/auth/Types/authtoken";
 import { v4 as uuidv4 } from "uuid";
-import { useSession } from "next-auth/react";
 import { getServerSession } from "next-auth";
+import { UserModel } from "@/app/Backend/models/UserModel";
 
-export async function POST(request: NextRequest) {
-
+async function getAuthenticatedUser(token?: string) {
   const session = await getServerSession();
-  const token = request.cookies.get("token")?.value as string;
-
-  const hasSession = session ? true : token ? true : false;
-
-  if (!hasSession) {
-    return NextResponse.json(
-      { success: false, error: "Authentication required" },
-      { status: 401 }
-    );
+  if (session && session.user?.email) {
+    await connectDB();
+    const user = await UserModel.findOne({ email: session.user.email }).select("email username");
+    if (!user) {
+      throw new Error("User not found");
+    }
+    return { email: user.email, username: user.username };
   }
 
+  if (!token) {
+    throw new Error("Authentication required");
+  }
+
+  let decoded: TokenPayload;
   try {
-    let decoded: TokenPayload;
+    decoded = verifyToken(token);
+  } catch (err) {
+    throw new Error(err instanceof Error ? err.message : "Invalid token");
+  }
 
-    if (session) {
+  if (!decoded.email) {
+    throw new Error("Token missing email");
+  }
 
-      decoded = {
-        id: "",
-        email: session.user.email,
-        username: session.user.username,
-      }
+  await connectDB();
+  const user = await UserModel.findById(decoded.id).select("email username");
+  if (!user) {
+    throw new Error("User not found");
+  }
 
-    } else {
-      try {
-        decoded = verifyToken(token);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "Invalid token";
-        return NextResponse.json(
-          { success: false, error: errorMessage },
-          { status: 401 }
-        );
-      }
-    }
+  return { email: user.email, username: user.username };
+}
 
-    const email = decoded.email;
-    if (!email) {
-      return NextResponse.json(
-        { success: false, error: "Token missing email" },
-        { status: 401 }
-      );
-    }
+export async function POST(request: NextRequest) {
+  const token = request.cookies.get("token")?.value;
+
+  try {
+    const { email } = await getAuthenticatedUser(token);
 
     await connectDB();
 
     const formData = await request.formData();
     const files = formData.getAll("file") as File[];
-    if (!files.length) {
-      return NextResponse.json(
-        { success: false, error: "No files provided" },
-        { status: 400 }
-      );
+    
+    const middlewareResponse = await uploadMiddleware(files);
+    if (middlewareResponse) {
+      return middlewareResponse;
     }
 
     const result: UploadResponse = await handleUpload(files);
@@ -75,10 +71,10 @@ export async function POST(request: NextRequest) {
       }));
 
       await UserImagesModel.findOneAndUpdate(
-        { email },
+        { email: email.toLowerCase() },
         {
           $push: { images: { $each: newImages } },
-          $setOnInsert: { email },
+          $setOnInsert: { email: email.toLowerCase() },
         },
         { upsert: true }
       );
@@ -93,7 +89,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown server error";
-    console.error("POST /auth/upload error:", error);
+    console.error("POST /auth/upload error:", errorMessage);
     return NextResponse.json(
       { success: false, error: `Failed to upload files: ${errorMessage}` },
       { status: 500 }

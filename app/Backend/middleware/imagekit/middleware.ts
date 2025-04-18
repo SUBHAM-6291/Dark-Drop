@@ -17,7 +17,7 @@ export async function uploadMiddleware(files: File[]): Promise<NextResponse<Uplo
     "image/tiff",
     "image/webp",
     "image/heic",
-    "image/jpg"
+    "image/jpg",
   ] as const;
   const MAX_SIZE = 20 * 1024 * 1024; // 20MB in bytes
 

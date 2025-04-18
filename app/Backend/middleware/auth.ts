@@ -1,4 +1,3 @@
-// app/api/auth/middleware.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { verifyToken } from "@/app/Backend/lib/auth/auth";
