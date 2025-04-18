@@ -19,7 +19,7 @@ export async function uploadMiddleware(files: File[]): Promise<NextResponse<Uplo
     "image/heic",
     "image/jpg",
   ] as const;
-  const MAX_SIZE = 20 * 1024 * 1024; // 20MB in bytes
+  const MAX_SIZE = 20 * 1024 * 1024; // 20MB in bytes 
 
   for (const file of files) {
     if (!allowedTypes.includes(file.type as typeof allowedTypes[number])) {
