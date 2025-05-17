@@ -1,7 +1,8 @@
 import ImageKit from "imagekit";
 import mongoose from "mongoose";
 import { UserModel } from "@/app/Backend/models/UserModel";
-import { getServerSession } from "next-auth";
+import { verifyToken } from "../lib/auth/auth";
+import { cookies } from "next/headers";
 
 const IMAGEKIT_PUBLIC_KEY = process.env.IMAGEKIT_PUBLIC_KEY;
 const IMAGEKIT_PRIVATE_KEY = process.env.IMAGEKIT_PRIVATE_KEY;
@@ -41,13 +42,21 @@ async function connectDB() {
 }
 
 async function getAuthenticatedUser() {
-  const session = await getServerSession();
-  if (!session || !session.user?.email) {
-    throw new Error("User not authenticated");
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) {
+    throw new Error("User not authenticated: No token provided");
+  }
+
+  let decoded;
+  try {
+    decoded = verifyToken(token);
+  } catch (err) {
+    throw new Error("User not authenticated: Invalid or expired token");
   }
 
   await connectDB();
-  const user = await UserModel.findOne({ email: session.user.email }).select("email username");
+  const user = await UserModel.findOne({ email: decoded.email }).select("email username");
   if (!user) {
     throw new Error("User not found");
   }
